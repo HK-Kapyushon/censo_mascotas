@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#534AB7">
+  <title>Censo de Mascotas</title>
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-pwa">
+  <div class="container-fluid px-3">
+    <span class="navbar-brand">🐾 Censo de Mascotas</span>
+    <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+      <button id="btnActivada"    class="btn btn-sm btn-info d-none"   onclick="cancelarSuscripcion()">🔔 Notif. activas</button>
+      <button id="btnDesactivada" class="btn btn-sm btn-outline-light" onclick="suscribirPush()">🔕 Activar notif.</button>
+      <span id="syncStatus" class="badge bg-secondary">Comprobando...</span>
+      <button id="btnSync" class="btn btn-sm btn-outline-light" onclick="sincronizarTodo()">⟳ Sync</button>
+      <span class="text-white small d-none d-md-inline" id="usuarioLabel"></span>
+      <button class="btn btn-sm btn-outline-light" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-5">
+  <div class="text-center mb-5">
+    <h2 style="font-weight:800;color:var(--color-primary);">Panel Principal</h2>
+    <p class="text-muted">¿Qué deseas hacer?</p>
+  </div>
+
+  <div class="row g-4 justify-content-center">
+    <div class="col-10 col-sm-5 col-md-3">
+      <a href="views/censo.html" class="nav-card">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label">Nuevo Censo</div>
+        <div class="text-muted small mt-1">Registra mascota con foto y GPS</div>
+      </a>
+    </div>
+    <div class="col-10 col-sm-5 col-md-3">
+      <a href="views/mis-censos.html" class="nav-card">
+        <div class="nav-icon">🗂️</div>
+        <div class="nav-label">Mis Censos</div>
+        <div class="text-muted small mt-1">Ver, editar y eliminar tus registros</div>
+      </a>
+    </div>
+    <div class="col-10 col-sm-5 col-md-3">
+      <a href="views/mapa.html" class="nav-card">
+        <div class="nav-icon">🗺️</div>
+        <div class="nav-label">Ver Mapa</div>
+        <div class="text-muted small mt-1">Todos los censos en el mapa global</div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/db.js"></script>
+<script>
+  const token  = localStorage.getItem('token');
+  const expira = parseInt(localStorage.getItem('tokenExpira') || '0');
+  if (!token || Date.now() > expira) window.location.href = 'login.html';
+
+  const uLabel = document.getElementById('usuarioLabel');
+  if (uLabel) uLabel.textContent = localStorage.getItem('usuarioActual') || '';
+
+  function cerrarSesion() {
+    ['token','tokenExpira','usuarioActual','tokenTipo'].forEach(k => localStorage.removeItem(k));
+    window.location.href = 'login.html';
+  }
+</script>
+</body>
+</html>

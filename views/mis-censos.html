@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#534AB7">
+  <title>Mis Censos</title>
+  <link rel="manifest" href="../manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="../css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-pwa">
+  <div class="container-fluid px-3">
+    <button class="btn btn-sm btn-outline-light me-2" onclick="window.location.href='../index.html'">← Volver</button>
+    <span class="navbar-brand mb-0">📋 Mis Censos</span>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <span id="syncStatus" class="badge bg-secondary">Comprobando...</span>
+      <button class="btn btn-sm btn-outline-light" onclick="sincronizarTodo()">⟳ Sync</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4 pb-5" style="max-width:680px;">
+
+  <!-- Alerta global -->
+  <div id="alertaGlobal" class="alert d-none mb-3"></div>
+
+  <!-- Header con contador -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h5 class="fw-900 mb-0" style="color:var(--color-primary);">Registros locales</h5>
+      <small class="text-muted" id="subtituloCensos">Cargando...</small>
+    </div>
+    <a href="censo.html" class="btn btn-pwa-primary btn-sm">+ Nuevo Censo</a>
+  </div>
+
+  <!-- Lista de censos -->
+  <div id="listaCensos">
+    <div class="text-center py-5 text-muted">
+      <div style="font-size:3rem;">📋</div>
+      <p class="mt-2 fw-600">Cargando tus censos...</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal de edición -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 32px rgba(83,74,183,.2);">
+      <div class="modal-header" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-l));border-radius:14px 14px 0 0;">
+        <h5 class="modal-title text-white fw-800">✏️ Editar Censo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId">
+        <div class="mb-3">
+          <label class="form-label">Nombre de la mascota</label>
+          <input class="form-control" id="editNombreMascota" placeholder="Nombre">
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <label class="form-label">Especie</label>
+            <select class="form-select" id="editTipo">
+              <option value="PERRO">Perro</option>
+              <option value="GATO">Gato</option>
+              <option value="PAJARO">Pájaro</option>
+              <option value="CONEJO">Conejo</option>
+              <option value="OTRO">Otro</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label class="form-label">Género</label>
+            <select class="form-select" id="editGenero">
+              <option value="MACHO">Macho</option>
+              <option value="HEMBRA">Hembra</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label class="form-label">Edad</label>
+            <input class="form-control" id="editEdad" type="number" step="0.5" min="0">
+          </div>
+        </div>
+        <div class="alert alert-warning small mb-0" style="border-radius:8px;">
+          ⚠️ Solo puedes editar censos que aún no se han sincronizado con el servidor.
+        </div>
+      </div>
+      <div class="modal-footer" style="border:none;">
+        <button class="btn btn-pwa-outline" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-pwa-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación borrar -->
+<div class="modal fade" id="modalBorrar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center p-4">
+        <div style="font-size:3rem;">🗑️</div>
+        <h5 class="fw-800 mt-2">¿Eliminar este censo?</h5>
+        <p class="text-muted small">Esta acción no se puede deshacer.</p>
+        <input type="hidden" id="borrarId">
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-pwa-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-pwa-danger" onclick="confirmarBorrar()">Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js"></script>
+<script src="../js/sync.js"></script>
+<script src="../js/db.js"></script>
+<script>
+if (!localStorage.getItem('token')) window.location.href = '../login.html';
+
+// ============================================================
+// Cargar y renderizar censos locales
+// ============================================================
+async function cargarMisCensos() {
+  const lista = document.getElementById('listaCensos');
+  const subtitulo = document.getElementById('subtituloCensos');
+
+  try {
+    const result = await DB_CENSOS.allDocs({ include_docs: true });
+    const censos = result.rows.map(r => r.doc).filter(d => !d._id.startsWith('_design'));
+
+    if (censos.length === 0) {
+      subtitulo.textContent = 'Sin censos registrados';
+      lista.innerHTML = `
+        <div class="text-center py-5">
+          <div style="font-size:4rem;">🐾</div>
+          <h5 class="fw-800 mt-3" style="color:var(--color-primary);">Aún no tienes censos</h5>
+          <p class="text-muted">Registra tu primera mascota para empezar</p>
+          <a href="censo.html" class="btn btn-pwa-primary mt-2">📋 Nuevo Censo</a>
+        </div>`;
+      return;
+    }
+
+    const synced   = censos.filter(c => c.syncStatus === 'synced').length;
+    const pending  = censos.filter(c => c.syncStatus !== 'synced').length;
+    subtitulo.textContent = `${censos.length} censo${censos.length !== 1 ? 's' : ''} — ${synced} sincronizados, ${pending} pendientes`;
+
+    lista.innerHTML = '';
+    for (const censo of censos.reverse()) { // más recientes primero
+      lista.appendChild(await crearTarjetaCenso(censo));
+    }
+  } catch (err) {
+    console.error(err);
+    subtitulo.textContent = 'Error al cargar';
+    lista.innerHTML = `<div class="alert alert-danger">Error al cargar los censos: ${err.message}</div>`;
+  }
+}
+
+// ============================================================
+// Crear tarjeta HTML de un censo
+// ============================================================
+async function crearTarjetaCenso(censo) {
+  // Intentar obtener datos de mascota y persona desde PouchDB local
+  let mascota = null, persona = null;
+  try {
+    // Buscar mascota por _id o remoteId
+    const mResult = await DB_MASCOTAS.allDocs({ include_docs: true });
+    mascota = mResult.rows.map(r => r.doc).find(
+      d => d._id === censo.idMascota || d.remoteId === censo.idMascota
+    );
+  } catch(e) {}
+  try {
+    const pResult = await DB_PERSONAS.allDocs({ include_docs: true });
+    persona = pResult.rows.map(r => r.doc).find(
+      d => d._id === censo.idDueno || d.remoteId === censo.idDueno
+    );
+  } catch(e) {}
+
+  const esSynced  = censo.syncStatus === 'synced';
+  const colorBadge = esSynced
+    ? '<span class="sync-badge-synced">✓ Sincronizado</span>'
+    : '<span class="sync-badge-pending">⏳ Pendiente</span>';
+
+  const fotoHTML = censo.fotografia
+    ? `<img src="${censo.fotografia}" class="censo-card-foto" alt="foto">`
+    : `<div class="censo-card-foto-placeholder">🐾</div>`;
+
+  const nombreMascota = mascota ? mascota.nombre : (censo.idMascota ? `ID: ${censo.idMascota.slice(0,8)}…` : '—');
+  const tipoMascota   = mascota ? `${mascota.tipo} · ${mascota.genero || ''}` : '';
+  const edadMascota   = mascota ? `${mascota.edad} años` : '';
+  const nombreDueno   = persona ? `${persona.nombres} ${persona.apellidos}` : (censo.idDueno ? `ID: ${censo.idDueno.slice(0,8)}…` : '—');
+
+  // Mini mapa estático (solo lat/lon texto si no hay conexión)
+  const coordsHTML = (censo.lat && censo.lon)
+    ? `<span class="text-muted" style="font-size:.8rem;">📍 ${censo.lat.toFixed(5)}, ${censo.lon.toFixed(5)}</span>`
+    : '';
+
+  const card = document.createElement('div');
+  card.className = 'censo-card mb-3';
+  card.innerHTML = `
+    <div class="censo-card-header">
+      ${fotoHTML}
+      <div class="flex-grow-1 min-width-0">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <strong style="font-size:1rem;">${nombreMascota}</strong>
+          ${colorBadge}
+        </div>
+        <div class="text-muted" style="font-size:.82rem;">${tipoMascota} ${edadMascota}</div>
+      </div>
+      <div style="width:14px;height:40px;border-radius:4px;background:${censo.color || '#C5C2FF'};border:2px solid #7A75C9;flex-shrink:0;"
+           title="Color del proyecto"></div>
+    </div>
+    <div class="censo-card-body">
+      <div class="row g-1" style="font-size:.85rem;">
+        <div class="col-6"><strong>👤 Dueño:</strong> ${nombreDueno}</div>
+        <div class="col-6"><strong>🏷️ Proyecto:</strong> ${censo.idProyecto || '—'}</div>
+        <div class="col-12 mt-1">${coordsHTML}</div>
+      </div>
+    </div>
+    <div class="censo-card-acciones">
+      ${!esSynced ? `
+        <button class="btn btn-pwa-warning btn-sm" onclick="abrirEdicion('${censo._id}')">
+          ✏️ Editar
+        </button>` : ''}
+      <button class="btn btn-pwa-danger btn-sm" onclick="abrirBorrar('${censo._id}')">
+        🗑️ Eliminar
+      </button>
+      ${esSynced ? `
+        <button class="btn btn-pwa-secondary btn-sm ms-auto" onclick="verEnMapa(${censo.lat}, ${censo.lon})">
+          🗺️ Ver en mapa
+        </button>` : `
+        <button class="btn btn-pwa-secondary btn-sm ms-auto" onclick="sincronizarTodo()">
+          ⟳ Sincronizar ahora
+        </button>`}
+    </div>`;
+  return card;
+}
+
+// ============================================================
+// Editar censo (solo si no está sincronizado)
+// ============================================================
+async function abrirEdicion(id) {
+  try {
+    const censo = await DB_CENSOS.get(id);
+    if (censo.syncStatus === 'synced') {
+      mostrarAlerta('alertaGlobal', 'Este censo ya fue sincronizado con el servidor y no puede editarse localmente.', 'warning');
+      return;
+    }
+    // Cargar datos de mascota
+    let mascota = null;
+    try {
+      const mResult = await DB_MASCOTAS.allDocs({ include_docs: true });
+      mascota = mResult.rows.map(r => r.doc).find(
+        d => d._id === censo.idMascota || d.remoteId === censo.idMascota
+      );
+    } catch(e) {}
+
+    document.getElementById('editId').value           = id;
+    document.getElementById('editNombreMascota').value = mascota ? mascota.nombre : '';
+    document.getElementById('editTipo').value          = mascota ? mascota.tipo   : 'PERRO';
+    document.getElementById('editGenero').value        = mascota ? mascota.genero : 'MACHO';
+    document.getElementById('editEdad').value          = mascota ? mascota.edad   : '';
+
+    new bootstrap.Modal(document.getElementById('modalEditar')).show();
+  } catch(err) {
+    mostrarAlerta('alertaGlobal', 'Error al abrir el censo: ' + err.message, 'danger');
+  }
+}
+
+async function guardarEdicion() {
+  const id     = document.getElementById('editId').value;
+  const nombre = document.getElementById('editNombreMascota').value.trim();
+  const tipo   = document.getElementById('editTipo').value;
+  const genero = document.getElementById('editGenero').value;
+  const edad   = parseFloat(document.getElementById('editEdad').value);
+
+  if (!nombre || isNaN(edad)) {
+    mostrarAlerta('alertaGlobal', 'Completa nombre y edad.', 'danger'); return;
+  }
+
+  try {
+    const censo = await DB_CENSOS.get(id);
+    // Actualizar también la mascota local si existe
+    const mResult = await DB_MASCOTAS.allDocs({ include_docs: true });
+    const mascota = mResult.rows.map(r => r.doc).find(
+      d => d._id === censo.idMascota || d.remoteId === censo.idMascota
+    );
+    if (mascota) {
+      await DB_MASCOTAS.put({ ...mascota, nombre, tipo, genero, edad,
+        syncStatus: mascota.syncStatus === 'synced' ? 'pending_update' : mascota.syncStatus });
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+    mostrarAlerta('alertaGlobal', '✓ Censo actualizado localmente.', 'success');
+    await cargarMisCensos();
+  } catch(err) {
+    mostrarAlerta('alertaGlobal', 'Error al guardar: ' + err.message, 'danger');
+  }
+}
+
+// ============================================================
+// Borrar censo
+// ============================================================
+function abrirBorrar(id) {
+  document.getElementById('borrarId').value = id;
+  new bootstrap.Modal(document.getElementById('modalBorrar')).show();
+}
+
+async function confirmarBorrar() {
+  const id = document.getElementById('borrarId').value;
+  try {
+    const censo = await DB_CENSOS.get(id);
+    if (censo.syncStatus === 'synced') {
+      // Marcar para borrar en el servidor en el próximo sync
+      await DB_CENSOS.put({ ...censo, syncStatus: 'pending_delete' });
+    } else {
+      // Aún no fue al servidor, borrar directo
+      await DB_CENSOS.remove(censo);
+    }
+    bootstrap.Modal.getInstance(document.getElementById('modalBorrar')).hide();
+    mostrarAlerta('alertaGlobal', '🗑️ Censo eliminado.', 'success');
+    await cargarMisCensos();
+  } catch(err) {
+    mostrarAlerta('alertaGlobal', 'Error al eliminar: ' + err.message, 'danger');
+  }
+}
+
+// ============================================================
+// Ver en mapa
+// ============================================================
+function verEnMapa(lat, lon) {
+  // Guardar coordenadas para que el mapa haga zoom al abrirse
+  localStorage.setItem('mapaFoco', JSON.stringify({ lat, lon, zoom: 17 }));
+  window.location.href = 'mapa.html';
+}
+
+// ============================================================
+// Alerta
+// ============================================================
+function mostrarAlerta(id, msg, tipo) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = `alert alert-${tipo}`;
+  el.textContent = msg;
+  el.classList.remove('d-none');
+  setTimeout(() => el.classList.add('d-none'), 5000);
+}
+
+// ============================================================
+// Inicio
+// ============================================================
+document.addEventListener('DOMContentLoaded', cargarMisCensos);
+</script>
+</body>
+</html>

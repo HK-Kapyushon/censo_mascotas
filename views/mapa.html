@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#534AB7">
+  <title>Mapa Global de Censos</title>
+  <link rel="manifest" href="../manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link href="../css/styles.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Nunito', sans-serif; overflow: hidden; }
+
+    /* Navbar flotante sobre el mapa */
+    .map-navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: var(--color-primary);
+      padding: 8px 14px;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    }
+    .map-navbar span  { color: white; font-weight: 800; font-size: .95rem; }
+    .map-navbar small { color: rgba(255,255,255,.7); font-size: .75rem; }
+
+    /* Mapa ocupa toda la pantalla debajo del navbar */
+    #map { position: fixed; top: 48px; left: 0; right: 0; bottom: 0; z-index: 1; }
+
+    /* Loader centrado */
+    #mapLoader {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: white; border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(83,74,183,.2);
+      padding: 1rem 2rem; z-index: 2000;
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--color-primary);
+    }
+
+    /* Toast de estado */
+    .map-toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px; border-radius: 8px;
+      background: white; box-shadow: 0 4px 12px rgba(0,0,0,.15);
+      z-index: 999; display: none;
+      font-weight: 600; font-size: .88rem;
+      max-width: 90vw; text-align: center;
+    }
+
+    /* Contador de pins flotante */
+    #contadorPins {
+      position: fixed; bottom: 70px; right: 14px;
+      background: var(--color-primary); color: white;
+      border-radius: 20px; padding: 6px 14px;
+      font-weight: 800; font-size: .82rem;
+      z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      display: none;
+    }
+
+    /* Popup de Leaflet: estilos internos */
+    .leaflet-popup-content { margin: 10px 14px; min-width: 200px; }
+    .popup-mascota-header  { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .popup-mascota-foto    { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+    .popup-mascota-icono   { font-size: 28px; line-height: 1; }
+    .popup-nombre          { font-weight: 800; font-size: 15px; color: #1a1733; }
+    .popup-subtitulo       { color: #666; font-size: 12px; }
+    .popup-divider         { border: none; border-top: 1px solid #eee; margin: 6px 0; }
+    .popup-dato            { font-size: 12.5px; margin: 3px 0; color: #333; }
+    .popup-badge           { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11px; color: white; font-weight: 700; }
+    .popup-foto-censo      { width: 100%; max-height: 120px; object-fit: cover; border-radius: 6px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="map-navbar">
+  <button class="btn btn-sm btn-outline-light" onclick="window.location.href='../index.html'">← Volver</button>
+  <span>🗺️ Mapa Global de Censos</span>
+  <small id="labelProyecto"></small>
+  <div class="ms-auto d-flex gap-2 align-items-center">
+    <button class="btn btn-sm btn-outline-light" onclick="recargarMapa()">⟳ Recargar</button>
+  </div>
+</div>
+
+<!-- Mapa -->
+<div id="map"></div>
+
+<!-- Loader -->
+<div id="mapLoader">
+  <div class="spinner-border spinner-border-sm" style="color:var(--color-primary);" role="status"></div>
+  Cargando censos...
+</div>
+
+<!-- Contador -->
+<div id="contadorPins"></div>
+
+<!-- Toast -->
+<div class="map-toast" id="mapToast"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js"></script>
+<script src="../js/sync.js"></script>
+<script src="../js/db.js"></script>
+
+<script>
+// ============================================================
+// map.js — Mapa Leaflet + OpenStreetMap
+// RF07: mapa interactivo
+// RF08: marcadores del color exacto del campo color
+// RF09: popup con datos completos de mascota + dueño + foto
+// ============================================================
+
+if (!localStorage.getItem('token')) window.location.href = '../login.html';
+
+let mapaLeaflet  = null;
+let totalCensos  = 0;
+
+// ---- Inicializar mapa ----
+function initMap() {
+  mapaLeaflet = L.map('map', {
+    center: [5.535, -73.367], // Tunja, UPTC
+    zoom: 6,                  // Zoom amplio para ver censos de otras ciudades (CP-04)
+    zoomControl: true
+  });
+
+  // Capa base OpenStreetMap
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(mapaLeaflet);
+
+  cargarMarcadores();
+}
+
+// ---- Cargar todos los censos de la API central (RF08) ----
+async function cargarMarcadores() {
+  const loader  = document.getElementById('mapLoader');
+  const contador = document.getElementById('contadorPins');
+  loader.style.display = 'flex';
+  contador.style.display = 'none';
+
+  // Limpiar marcadores anteriores
+  if (mapaLeaflet) {
+    mapaLeaflet.eachLayer(layer => {
+      if (layer instanceof L.Marker) mapaLeaflet.removeLayer(layer);
+    });
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/v1/censos`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const censos = await res.json();
+
+    totalCensos = censos.length;
+
+    if (!censos || censos.length === 0) {
+      mostrarToast('No hay censos registrados aún en la API.', 'info');
+      loader.style.display = 'none';
+      return;
+    }
+
+    // Renderizar en lotes con requestAnimationFrame (RNF03 — no bloquea el hilo)
+    let i = 0;
+    const bounds = [];
+
+    function procesarLote() {
+      const fin = Math.min(i + 20, censos.length);
+      for (; i < fin; i++) {
+        const marker = dibujarMarcador(censos[i]);
+        if (marker) bounds.push([censos[i].lat, censos[i].lon]);
+      }
+      if (i < censos.length) {
+        requestAnimationFrame(procesarLote);
+      } else {
+        loader.style.display = 'none';
+        contador.style.display = 'block';
+        contador.textContent = `📍 ${totalCensos} censo${totalCensos !== 1 ? 's' : ''}`;
+
+        // Ajustar zoom para mostrar todos los marcadores
+        if (bounds.length > 1) {
+          mapaLeaflet.fitBounds(bounds, { padding: [40, 40] });
+        } else if (bounds.length === 1) {
+          mapaLeaflet.setView(bounds[0], 15);
+        }
+        checkMapaFoco();
+      }
+    }
+    requestAnimationFrame(procesarLote);
+
+  } catch (err) {
+    console.error('[Mapa]', err);
+    loader.style.display = 'none';
+    mostrarToast('No se pudieron cargar los censos. Verifica tu conexión.', 'warning');
+  }
+}
+
+// ---- Helper: oscurecer un color hex para usarlo como borde ----
+function darkenColor(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  const factor = 0.7;
+  const dr = Math.round(r * factor).toString(16).padStart(2,'0');
+  const dg = Math.round(g * factor).toString(16).padStart(2,'0');
+  const db = Math.round(b * factor).toString(16).padStart(2,'0');
+  return `#${dr}${dg}${db}`;
+}
+
+// ---- Dibujar un marcador con el color del censo (RF08) ----
+function dibujarMarcador(censo) {
+  if (!censo.lat || !censo.lon || !mapaLeaflet) return null;
+
+  const color = censo.color || '#534AB7';
+
+  // Borde del pin: cada grupo puede tener su propio color de borde.
+  // Para nuestro grupo (#C5C2FF) usamos borde #7A75C9.
+  // Para otros grupos usamos un borde oscurecido automáticamente.
+  const borderColor = (color.toUpperCase() === '#C5C2FF') ? '#7A75C9' : darkenColor(color);
+
+  // Ícono SVG pin con el color EXACTO del campo color (RF08)
+  const svgPin = `
+    <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <filter id="sombra-${censo.id || Math.random()}">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+      </filter>
+      <path d="M16 1 C7.72 1 1 7.72 1 16 C1 27.5 16 41 16 41 C16 41 31 27.5 31 16 C31 7.72 24.28 1 16 1Z"
+        fill="${color}" stroke="${borderColor}" stroke-width="2.5" filter="url(#sombra-${censo.id || ''})"/>
+      <circle cx="16" cy="16" r="7" fill="white" opacity="0.25"/>
+      <text x="16" y="20" text-anchor="middle" font-size="12" fill="white">🐾</text>
+    </svg>`;
+
+  const icono = L.divIcon({
+    className:   '',
+    html:        svgPin,
+    iconSize:    [32, 42],
+    iconAnchor:  [16, 42],
+    popupAnchor: [0, -44]
+  });
+
+  const marker = L.marker([censo.lat, censo.lon], { icon: icono });
+  marker.bindPopup(construirPopup(censo), {
+    maxWidth: 260,
+    className: 'popup-censo'
+  });
+  marker.addTo(mapaLeaflet);
+  return marker;
+}
+
+// ---- Popup con datos completos (RF09) ----
+function construirPopup(c) {
+  const m     = c.mascota || {};
+  const d     = c.dueno   || {};
+  const color = c.color   || '#534AB7';
+
+  const mascFoto = m.fotografia
+    ? `<img src="${m.fotografia}" class="popup-mascota-foto" alt="${m.nombre}">`
+    : `<span class="popup-mascota-icono">🐾</span>`;
+
+  const fotosCenso = c.fotografiaCenso
+    ? `<img src="${c.fotografiaCenso}" class="popup-foto-censo" alt="Foto del censo">`
+    : '';
+
+  return `
+    <div style="font-family:'Nunito',sans-serif;">
+      <!-- Mascota -->
+      <div class="popup-mascota-header">
+        ${mascFoto}
+        <div>
+          <div class="popup-nombre">${m.nombre || 'Sin nombre'}</div>
+          <div class="popup-subtitulo">
+            ${m.tipo || ''} · ${m.genero || ''} · ${m.edad != null ? m.edad + ' años' : ''}
+          </div>
+        </div>
+      </div>
+      <hr class="popup-divider">
+      <!-- Dueño -->
+      <div class="popup-dato"><strong>👤</strong> ${d.nombres || ''} ${d.apellidos || ''}</div>
+      <div class="popup-dato"><strong>📞</strong> ${d.telefono || 'N/A'}</div>
+      <div class="popup-dato"><strong>🏙️</strong> ${d.ciudad || 'N/A'}</div>
+      <hr class="popup-divider">
+      <!-- Proyecto -->
+      <div class="popup-dato">
+        <span class="popup-badge" style="background:${color};">${c.idProyecto || ''}</span>
+        <span style="font-size:11px;color:#999;margin-left:4px;">${c.color || ''}</span>
+      </div>
+      <!-- Foto del censo -->
+      ${fotosCenso}
+    </div>`;
+}
+
+// ---- Recargar ----
+function recargarMapa() {
+  cargarMarcadores();
+}
+
+// ---- Toast ----
+function mostrarToast(msg, tipo) {
+  const t = document.getElementById('mapToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.background = tipo === 'warning' ? '#fff3cd' : tipo === 'info' ? '#cff4fc' : '#d1e7dd';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 4000);
+}
+
+// ---- Arrancar ----
+document.addEventListener('DOMContentLoaded', () => {
+  const label = document.getElementById('labelProyecto');
+  if (label) label.textContent = '· Grupo: PWA_GRUPO_01';
+  initMap();
+});
+
+// Recibir foco desde "Ver en mapa" de mis-censos.html
+function checkMapaFoco() {
+  const foco = localStorage.getItem('mapaFoco');
+  if (foco) {
+    try {
+      const { lat, lon, zoom } = JSON.parse(foco);
+      mapaLeaflet.setView([lat, lon], zoom || 17);
+      localStorage.removeItem('mapaFoco');
+    } catch(e) {}
+  }
+}
+</script>
+</body>
+</html>

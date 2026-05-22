@@ -1,0 +1,293 @@
+/* ============================================================
+   styles.css — PWA Censo de Mascotas
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --color-primary:    #534AB7;
+  --color-primary-d:  #3C3489;
+  --color-primary-l:  #7A75C9;
+  --color-accent:     #C5C2FF;
+  --color-bg:         #F2F0FB;
+  --color-card:       #ffffff;
+  --color-border:     #D8D5F0;
+  --color-text:       #1a1733;
+  --color-muted:      #6c757d;
+  --color-success:    #1a8a5a;
+  --color-warning:    #b87800;
+  --radius:           14px;
+  --radius-sm:        8px;
+  --shadow:           0 4px 24px rgba(83,74,183,0.10);
+  --shadow-md:        0 8px 32px rgba(83,74,183,0.16);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--color-bg);
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+/* ================================================================
+   NAVBAR
+   ================================================================ */
+.navbar-pwa {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-l) 100%) !important;
+  box-shadow: 0 3px 16px rgba(83,74,183,0.28);
+  padding: .55rem 1rem;
+}
+.navbar-pwa .navbar-brand,
+.navbar-pwa .nav-link { color: white !important; font-weight: 800; font-size: .95rem; }
+.navbar-pwa .nav-link:hover { opacity: .8; }
+
+/* ================================================================
+   BOTONES — mejorados visualmente
+   ================================================================ */
+
+/* Primario */
+.btn-pwa-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-l) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  padding: .55rem 1.4rem;
+  letter-spacing: .2px;
+  box-shadow: 0 4px 14px rgba(83,74,183,0.30);
+  transition: transform .15s, box-shadow .15s, filter .15s;
+}
+.btn-pwa-primary:hover  { filter: brightness(1.1); color: white; box-shadow: 0 6px 18px rgba(83,74,183,0.40); }
+.btn-pwa-primary:active { transform: scale(.97); }
+
+/* Outline púrpura */
+.btn-pwa-outline {
+  background: white;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  padding: .5rem 1.2rem;
+  transition: all .15s;
+}
+.btn-pwa-outline:hover { background: var(--color-accent); border-color: var(--color-primary-l); color: var(--color-primary-d); }
+
+/* Danger con estilo */
+.btn-pwa-danger {
+  background: linear-gradient(135deg, #e53935, #ef5350);
+  color: white; border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  padding: .45rem 1rem;
+  box-shadow: 0 3px 10px rgba(229,57,53,.28);
+  transition: filter .15s, transform .15s;
+}
+.btn-pwa-danger:hover  { filter: brightness(1.1); color: white; }
+.btn-pwa-danger:active { transform: scale(.97); }
+
+/* Warning / editar */
+.btn-pwa-warning {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #1a1733; border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  padding: .45rem 1rem;
+  box-shadow: 0 3px 10px rgba(245,158,11,.25);
+  transition: filter .15s, transform .15s;
+}
+.btn-pwa-warning:hover  { filter: brightness(1.08); }
+.btn-pwa-warning:active { transform: scale(.97); }
+
+/* Botón secundario */
+.btn-pwa-secondary {
+  background: #ede9fe;
+  color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  padding: .5rem 1.2rem;
+  transition: background .15s, transform .15s;
+}
+.btn-pwa-secondary:hover  { background: var(--color-accent); }
+.btn-pwa-secondary:active { transform: scale(.97); }
+
+/* ================================================================
+   CARDS
+   ================================================================ */
+.card-pwa {
+  background: var(--color-card);
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.4rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ================================================================
+   FORMULARIOS
+   ================================================================ */
+.form-control, .form-select {
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: #faf9ff;
+  font-family: inherit;
+  font-size: .92rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--color-primary-l);
+  box-shadow: 0 0 0 3px rgba(197,194,255,.35);
+  background: #fff;
+}
+.form-label { font-weight: 700; font-size: .88rem; margin-bottom: .3rem; color: var(--color-text); }
+
+/* ================================================================
+   TABLA
+   ================================================================ */
+.table thead th {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-l));
+  color: white;
+  font-weight: 800;
+  border: none;
+  font-size: .88rem;
+  padding: .65rem .85rem;
+}
+.table tbody tr { transition: background .15s; }
+.table tbody tr:hover { background: #f0eef8; }
+.table td { vertical-align: middle; font-size: .9rem; padding: .6rem .85rem; }
+
+/* ================================================================
+   BADGE ESTADO CONEXIÓN
+   ================================================================ */
+#syncStatus { font-size: .72rem; padding: .3rem .65rem; border-radius: 20px; }
+
+/* ================================================================
+   SECCIÓN TÍTULO (en censo)
+   ================================================================ */
+.seccion-titulo {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-l));
+  color: white;
+  font-weight: 800;
+  padding: .45rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: .92rem;
+  letter-spacing: .2px;
+}
+
+/* ================================================================
+   MAPA
+   ================================================================ */
+#map, #mapCenso { border-radius: var(--radius-sm); }
+.map-toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 22px; border-radius: 10px;
+  background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  z-index: 999; display: none;
+  font-weight: 700; font-size: .87rem;
+  max-width: 90vw; text-align: center;
+}
+
+/* ================================================================
+   FOTO PREVIEW
+   ================================================================ */
+.foto-preview {
+  max-height: 170px; object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 2.5px solid var(--color-accent);
+  width: 100%;
+}
+
+/* ================================================================
+   PANEL PRINCIPAL — tarjetas de navegación
+   ================================================================ */
+.nav-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--color-text);
+  display: block;
+  border: 2px solid transparent;
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  position: relative;
+  overflow: hidden;
+}
+.nav-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-l));
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.nav-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-accent);
+  color: var(--color-primary);
+}
+.nav-card .nav-icon { font-size: 2.6rem; margin-bottom: .5rem; display: block; }
+.nav-card .nav-label { font-weight: 900; font-size: 1.05rem; }
+
+/* ================================================================
+   MIS CENSOS — tarjetas de registro
+   ================================================================ */
+.censo-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--color-border);
+  overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+}
+.censo-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.censo-card-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: .8rem 1rem;
+  border-bottom: 1.5px solid var(--color-border);
+}
+.censo-card-foto {
+  width: 48px; height: 48px; border-radius: 50%;
+  object-fit: cover; border: 2.5px solid var(--color-accent);
+  flex-shrink: 0;
+}
+.censo-card-foto-placeholder {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--color-accent); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  border: 2.5px solid var(--color-primary-l);
+}
+.censo-card-body { padding: .8rem 1rem; }
+.censo-card-acciones { padding: .7rem 1rem; display: flex; gap: 8px; border-top: 1px solid #f0eef8; }
+.sync-badge-pending { font-size: .7rem; background: #fff3cd; color: #856404; border-radius: 20px; padding: 2px 8px; font-weight: 700; }
+.sync-badge-synced  { font-size: .7rem; background: #d1fae5; color: #065f46; border-radius: 20px; padding: 2px 8px; font-weight: 700; }
+
+/* ================================================================
+   TABS (login)
+   ================================================================ */
+.tab-btn {
+  flex: 1; border: none;
+  background: #ede9fe; color: var(--color-primary);
+  font-weight: 700; padding: .5rem;
+  border-radius: var(--radius-sm);
+  transition: all .2s;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-l));
+  color: white;
+  box-shadow: 0 3px 10px rgba(83,74,183,.28);
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 576px) {
+  .card-pwa { padding: 1rem; }
+  .nav-card  { padding: 1.1rem .75rem; }
+  .nav-card .nav-icon { font-size: 2.1rem; }
+}

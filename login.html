@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#534AB7">
+  <title>Censo de Mascotas — UPTC</title>
+  <link rel="manifest" href="manifest.json">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet">
+  <style>
+    body {
+      background: var(--color-bg);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(83,74,183,0.13);
+      padding: 2rem;
+    }
+    .dog-container { width: 120px; height: 120px; margin: 0 auto 1rem; display: block; }
+    .dog-container svg { width: 100%; height: 100%; overflow: visible; }
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: #f0eef8;
+      color: var(--color-primary);
+      font-weight: 700;
+      padding: .5rem;
+      border-radius: 8px;
+      transition: all .2s;
+    }
+    .tab-btn.active {
+      background: var(--color-primary);
+      color: white;
+    }
+    .section-title {
+      font-weight: 800;
+      color: var(--color-text);
+      text-align: center;
+      margin-bottom: 1.25rem;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-card">
+
+  <!-- Perrito animado -->
+  <div class="dog-container">
+    <svg id="dogSvg" viewBox="0 0 160 155" xmlns="http://www.w3.org/2000/svg">
+      <path d="M108 108 C118 100 130 92 132 80 C134 68 126 58 116 63 C112 65 110 70 112 75 C114 80 118 80 116 86 C114 90 108 94 106 100 Z" fill="#C8A26B" stroke="#A0784A" stroke-width="1.5"/>
+      <ellipse cx="78" cy="115" rx="36" ry="27" fill="#C8A26B"/>
+      <ellipse cx="78" cy="80" rx="33" ry="31" fill="#D4AE78"/>
+      <g id="earLeft"><ellipse cx="53" cy="59" rx="14" ry="20" fill="#A0784A" transform="rotate(-15 53 59)"/><ellipse cx="53" cy="59" rx="9" ry="14" fill="#8B5E35" transform="rotate(-15 53 59)"/></g>
+      <g id="earRight"><ellipse cx="103" cy="59" rx="14" ry="20" fill="#A0784A" transform="rotate(15 103 59)"/><ellipse cx="103" cy="59" rx="9" ry="14" fill="#8B5E35" transform="rotate(15 103 59)"/></g>
+      <ellipse cx="78" cy="92" rx="16" ry="12" fill="#C49A5E"/>
+      <ellipse cx="78" cy="86" rx="8" ry="5" fill="#3D2B1F"/>
+      <ellipse cx="75" cy="84" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.45)"/>
+      <path d="M72 95 Q78 101 84 95" stroke="#3D2B1F" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <g id="eyesOpen">
+        <ellipse cx="65" cy="76" rx="7.5" ry="8" fill="white"/>
+        <ellipse cx="65" cy="77" rx="5" ry="5.5" fill="#3D2B1F"/>
+        <ellipse cx="62.5" cy="75" rx="1.5" ry="1.5" fill="white"/>
+        <ellipse cx="91" cy="76" rx="7.5" ry="8" fill="white"/>
+        <ellipse cx="91" cy="77" rx="5" ry="5.5" fill="#3D2B1F"/>
+        <ellipse cx="88.5" cy="75" rx="1.5" ry="1.5" fill="white"/>
+        <path d="M59 67 Q65 64 71 66" stroke="#8B5E35" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M85 66 Q91 64 97 67" stroke="#8B5E35" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </g>
+      <g id="eyesClosed" style="display:none">
+        <path d="M58 76 Q65 72 72 76" stroke="#3D2B1F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M84 76 Q91 72 98 76" stroke="#3D2B1F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <ellipse cx="55" cy="90" rx="7" ry="4" fill="#E89070" opacity="0.35"/>
+      <ellipse cx="101" cy="90" rx="7" ry="4" fill="#E89070" opacity="0.35"/>
+      <g id="earLeftCover" style="display:none"><ellipse cx="62" cy="81" rx="18" ry="23" fill="#A0784A" transform="rotate(12 62 81)"/><ellipse cx="62" cy="81" rx="12" ry="16" fill="#8B5E35" transform="rotate(12 62 81)"/></g>
+      <g id="earRightCover" style="display:none"><ellipse cx="95" cy="81" rx="18" ry="23" fill="#A0784A" transform="rotate(-12 95 81)"/><ellipse cx="95" cy="81" rx="12" ry="16" fill="#8B5E35" transform="rotate(-12 95 81)"/></g>
+      <ellipse cx="60" cy="137" rx="14" ry="9" fill="#C8A26B"/>
+      <ellipse cx="96" cy="137" rx="14" ry="9" fill="#C8A26B"/>
+      <rect x="56" y="105" width="44" height="9" rx="4" fill="#534AB7"/>
+      <rect x="74" y="103" width="8" height="13" rx="3" fill="#7F77DD"/>
+      <ellipse cx="78" cy="115" rx="4" ry="3" fill="#CCC"/>
+    </svg>
+  </div>
+
+  <!-- Tabs Login / Registrarse -->
+  <div class="d-flex gap-2 mb-4">
+    <button class="tab-btn active" id="tabLogin"    onclick="mostrarTab('login')">Ingresar</button>
+    <button class="tab-btn"        id="tabRegistro" onclick="mostrarTab('registro')">Registrarse</button>
+  </div>
+
+  <!-- ===== PANEL LOGIN ===== -->
+  <div id="panelLogin">
+    <p class="section-title">Iniciar Sesión</p>
+    <form id="loginForm" novalidate>
+      <input type="text"     id="usuario"    class="form-control mb-3" placeholder="Usuario" required autocomplete="username">
+      <input type="password" id="contrasena" class="form-control mb-3" placeholder="Contraseña" required autocomplete="current-password">
+      <button type="submit" class="btn btn-pwa-primary w-100">Ingresar</button>
+    </form>
+    <div id="errorLogin" class="text-danger mt-2 text-center small"></div>
+  </div>
+
+  <!-- ===== PANEL REGISTRO (= crear Persona/Usuario) ===== -->
+  <div id="panelRegistro" style="display:none;">
+    <p class="section-title">Crear Cuenta</p>
+    <div id="alertaRegistro" class="alert d-none mb-3"></div>
+    <form id="registroForm" novalidate>
+      <div class="row g-2">
+        <div class="col-6">
+          <input class="form-control" id="reg_nombres"    placeholder="Nombres *" required>
+        </div>
+        <div class="col-6">
+          <input class="form-control" id="reg_apellidos"  placeholder="Apellidos *" required>
+        </div>
+        <div class="col-5">
+          <select class="form-select" id="reg_tipoDoc">
+            <option value="CC">CC</option>
+            <option value="CE">CE</option>
+            <option value="TI">TI</option>
+            <option value="Pasaporte">Pasaporte</option>
+          </select>
+        </div>
+        <div class="col-7">
+          <input class="form-control" id="reg_documento"  placeholder="N° Documento *" required>
+        </div>
+        <div class="col-12">
+          <input class="form-control" id="reg_direccion"  placeholder="Dirección">
+        </div>
+        <div class="col-6">
+          <input class="form-control" id="reg_telefono"   placeholder="Teléfono" type="tel">
+        </div>
+        <div class="col-6">
+          <input class="form-control" id="reg_ciudad"     placeholder="Ciudad">
+        </div>
+        <div class="col-12"><hr class="my-1"></div>
+        <div class="col-12">
+          <input class="form-control" id="reg_usuario"    placeholder="Usuario *" required autocomplete="off">
+        </div>
+        <div class="col-12">
+          <input class="form-control" id="reg_contrasena" placeholder="Contraseña *" type="password" required autocomplete="new-password">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-pwa-primary w-100 mt-3">Crear cuenta</button>
+    </form>
+  </div>
+
+</div><!-- /auth-card -->
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/db.js"></script>
+
+<script>
+// ---- Animación del perrito ----
+const usuarioInput    = document.getElementById('usuario');
+const contrasenaInput = document.getElementById('contrasena');
+const earLeft  = document.getElementById('earLeft'),  earRight  = document.getElementById('earRight');
+const earLC    = document.getElementById('earLeftCover'), earRC = document.getElementById('earRightCover');
+const eyesOpen = document.getElementById('eyesOpen'), eyesClosed = document.getElementById('eyesClosed');
+
+function showNormal()   { earLeft.style.display=''; earRight.style.display=''; earLC.style.display='none'; earRC.style.display='none'; eyesOpen.style.display=''; eyesClosed.style.display='none'; }
+function showPassword() { earLeft.style.display='none'; earRight.style.display='none'; earLC.style.display=''; earRC.style.display=''; eyesOpen.style.display='none'; eyesClosed.style.display=''; }
+
+usuarioInput.addEventListener('focus', showNormal);
+contrasenaInput.addEventListener('focus', showPassword);
+contrasenaInput.addEventListener('blur',  showNormal);
+
+// ---- Tabs ----
+function mostrarTab(tab) {
+  document.getElementById('panelLogin').style.display    = tab === 'login'    ? '' : 'none';
+  document.getElementById('panelRegistro').style.display = tab === 'registro' ? '' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+  document.getElementById('tabRegistro').classList.toggle('active', tab === 'registro');
+}
+
+// Ir directo al registro si viene ?registro=1 en la URL
+if (location.search.includes('registro=1')) mostrarTab('registro');
+
+// ---- LOGIN ----
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const usuario    = document.getElementById('usuario').value.trim();
+  const contrasena = document.getElementById('contrasena').value;
+  const errDiv     = document.getElementById('errorLogin');
+  const btn        = e.submitter;
+  errDiv.textContent = '';
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  try {
+    const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, contrasena })
+    });
+    if (!res.ok) throw new Error((await res.text()) || 'Credenciales inválidas');
+    const data = await res.json();
+    localStorage.setItem('token',         data.token);
+    localStorage.setItem('tokenTipo',     data.tipoToken);
+    localStorage.setItem('tokenExpira',   Date.now() + (data.expiraEn * 1000));
+    localStorage.setItem('usuarioActual', usuario);
+    window.location.href = 'index.html';
+  } catch (err) {
+    errDiv.textContent = err.message || 'Error de conexión.';
+    btn.disabled = false; btn.textContent = 'Ingresar';
+  }
+});
+
+// ---- REGISTRO ----
+document.getElementById('registroForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn    = e.submitter;
+  const alerta = document.getElementById('alertaRegistro');
+
+  const nombres    = document.getElementById('reg_nombres').value.trim();
+  const apellidos  = document.getElementById('reg_apellidos').value.trim();
+  const documento  = document.getElementById('reg_documento').value.trim();
+  const usuario    = document.getElementById('reg_usuario').value.trim();
+  const contrasena = document.getElementById('reg_contrasena').value;
+
+  if (!nombres || !apellidos || !documento || !usuario || !contrasena) {
+    alerta.className = 'alert alert-danger';
+    alerta.textContent = 'Completa los campos obligatorios (*)';
+    alerta.classList.remove('d-none');
+    return;
+  }
+
+  const payload = {
+    id:             crypto.randomUUID(),
+    nombres,
+    apellidos,
+    tipoDocumento:  document.getElementById('reg_tipoDoc').value,
+    documento,
+    direccion:      document.getElementById('reg_direccion').value.trim(),
+    telefono:       document.getElementById('reg_telefono').value.trim(),
+    ciudad:         document.getElementById('reg_ciudad').value.trim(),
+    usuario,
+    contrasena
+  };
+
+  btn.disabled = true; btn.textContent = 'Creando cuenta...';
+  alerta.classList.add('d-none');
+
+  try {
+    // Guardar en PouchDB local primero (offline-first)
+    await DB_PERSONAS.put({
+      _id:           payload.id,
+      nombres, apellidos,
+      tipoDocumento: payload.tipoDocumento,
+      documento,
+      direccion:     payload.direccion,
+      telefono:      payload.telefono,
+      ciudad:        payload.ciudad,
+      usuario,
+      contrasenaHash: contrasena, // sync.js la enviará al backend
+      remoteId:      null,
+      syncStatus:    'pending_create'
+    });
+
+    // Intentar sync inmediato si hay conexión
+    if (navigator.onLine) {
+      const res = await fetch(`${API_URL}/api/v1/personas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const creada = await res.json();
+      // Marcar como synced
+      const doc = await DB_PERSONAS.get(payload.id);
+      delete doc.contrasenaHash;
+      await DB_PERSONAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
+
+      alerta.className = 'alert alert-success';
+      alerta.textContent = '✓ Cuenta creada. Ahora inicia sesión.';
+      alerta.classList.remove('d-none');
+      document.getElementById('registroForm').reset();
+      setTimeout(() => mostrarTab('login'), 1800);
+    } else {
+      alerta.className = 'alert alert-warning';
+      alerta.textContent = '⏳ Guardado localmente. Se sincronizará cuando haya conexión. Inicia sesión cuando estés en línea.';
+      alerta.classList.remove('d-none');
+    }
+  } catch (err) {
+    alerta.className = 'alert alert-danger';
+    alerta.textContent = 'Error: ' + (err.message || 'No se pudo crear la cuenta.');
+    alerta.classList.remove('d-none');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Crear cuenta';
+  }
+});
+
+// Redirigir si ya tiene sesión válida
+const token  = localStorage.getItem('token');
+const expira = parseInt(localStorage.getItem('tokenExpira') || '0');
+if (token && Date.now() < expira) window.location.href = 'index.html';
+</script>
+</body>
+</html>
