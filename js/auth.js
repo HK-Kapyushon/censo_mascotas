@@ -33,6 +33,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         errDiv.textContent = err.message || 'Error de conexión.';
         btn.disabled = false;
         btn.textContent = 'Ingresar';
+        
     }
 });
 

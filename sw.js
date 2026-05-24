@@ -19,22 +19,15 @@ function limpiarCache(cacheName, maxItems) {
 }
 
 // ---- INSTALL ----
-self.addEventListener('install', e => {
-    const cacheStatic = caches.open(CACHE_STATIC).then(cache => cache.addAll([
-        '/',
-        '/index.html',
-        '/login.html',
-        '/not-found.html',
-        '/views/censo.html',
-        '/views/mapa.html',
-        '/views/mis-censos.html',
-        '/js/db.js',
-        '/js/sync.js',
-        '/js/auth.js',
-        '/js/photo.js',
-        '/css/styles.css',
-        '/manifest.json',
-    ]).catch(err => console.warn('[SW] Algunos assets no se cachearon:', err)));
+const cacheStatic = caches.open(CACHE_STATIC).then(cache => {
+    const assets = [ '/', '/index.html', '/login.html', '/not-found.html',
+        '/views/censo.html', '/views/mapa.html', '/views/mis-censos.html',
+        '/js/db.js', '/js/sync.js', '/js/auth.js', '/js/photo.js',
+        '/css/styles.css', '/manifest.json' ];
+    return Promise.allSettled(assets.map(url => cache.add(url).catch(e =>
+        console.warn('[SW] No se pudo cachear:', url)
+    )));
+});
 
     const cacheInmutable = caches.open(CACHE_INMUTABLE).then(cache => cache.addAll([
         'https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css',
@@ -46,7 +39,7 @@ self.addEventListener('install', e => {
 
     e.waitUntil(Promise.all([cacheStatic, cacheInmutable]));
     self.skipWaiting();
-});
+
 
 // ---- ACTIVATE ----
 self.addEventListener('activate', e => {
@@ -81,7 +74,8 @@ self.addEventListener('fetch', e => {
             return fetch(e.request).then(response => {
                 if (response && response.status === 200 && response.type !== 'opaque') {
                     caches.open(CACHE_DYNAMIC).then(cache => {
-                        cache.put(e.request, response.clone());
+                    const responseToCache = response.clone();
+                    cache.put(e.request, responseToCache);
                         limpiarCache(CACHE_DYNAMIC, 50);
                     });
                 }
