@@ -12,175 +12,168 @@
   <link href="../css/styles.css" rel="stylesheet">
   <style>
     .seccion-titulo {
-      background: var(--color-primary);
-      color: white;
-      font-weight: 800;
-      padding: .4rem 1rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      font-size: .95rem;
-      letter-spacing: .3px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-l));
+      color: white; font-weight: 800; padding: .4rem 1rem;
+      border-radius: 8px; margin-bottom: 1rem; font-size: .95rem;
     }
     #mapCenso { height: 220px; border-radius: 10px; border: 2px solid var(--color-border); }
-    .foto-preview { max-height: 180px; object-fit: cover; border-radius: 8px; width: 100%; border: 2px solid var(--color-border); }
+    .foto-preview { max-height: 180px; object-fit: cover; border-radius: 8px; width: 100%; border: 2px solid var(--color-accent); }
+    .paso-bar { display: flex; gap: 6px; margin-bottom: 1rem; }
+    .paso-seg { flex: 1; height: 5px; border-radius: 3px; background: var(--color-border); transition: background .3s; }
+    .paso-seg.activo   { background: var(--color-primary); }
+    .paso-seg.completo { background: #1a8a5a; }
   </style>
 </head>
 <body>
 
 <nav class="navbar navbar-pwa">
   <div class="container-fluid px-3">
-    <button class="btn btn-sm btn-outline-light me-2" onclick="window.location.href='../index.html'">← Volver</button>
+    <button class="btn btn-sm btn-outline-light me-2" onclick="history.back()">← Volver</button>
     <span class="navbar-brand mb-0">📋 Nuevo Censo</span>
-    <div class="ms-auto d-flex align-items-center gap-2">
-      <span id="syncStatus" class="badge bg-secondary">Comprobando...</span>
-    </div>
+    <div class="ms-auto"><span id="syncStatus" class="badge bg-secondary">Comprobando...</span></div>
   </div>
 </nav>
 
 <div class="container mt-3 pb-4" style="max-width:640px;">
   <div id="censoAlerta" class="alert d-none"></div>
 
-  <form id="censoForm" novalidate>
+  <!-- Indicador de pasos -->
+  <div class="paso-bar">
+    <div class="paso-seg activo" id="seg1"></div>
+    <div class="paso-seg"        id="seg2"></div>
+    <div class="paso-seg"        id="seg3"></div>
+    <div class="paso-seg"        id="seg4"></div>
+  </div>
+  <p class="text-center text-muted small mb-3" id="pasoLabel">Paso 1 de 4 — Dueño</p>
 
-    <!-- ══════════════ 1. DATOS DE LA PERSONA / DUEÑO ══════════════ -->
+  <!-- ══════ PASO 1: DUEÑO ══════ -->
+  <div id="paso1">
     <div class="card-pwa">
-      <div class="seccion-titulo">👤 Datos del Dueño</div>
+      <div class="seccion-titulo">👤 Paso 1 — Dueño de la mascota</div>
 
-      <!-- Selector: dueño existente o nuevo -->
       <div class="mb-3">
-        <label class="form-label fw-bold small">¿Ya tienes cuenta registrada?</label>
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-sm btn-pwa-primary" id="btnUsarExistente" onclick="toggleDueno('existente')">Seleccionar existente</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="btnNuevoDueno" onclick="toggleDueno('nuevo')">Registrar nuevo</button>
+          <button type="button" class="btn btn-pwa-primary btn-sm" id="btnExistente" onclick="toggleDueno('existente')">Seleccionar existente</button>
+          <button type="button" class="btn btn-pwa-outline  btn-sm" id="btnNuevo"    onclick="toggleDueno('nuevo')">Registrar nuevo</button>
         </div>
       </div>
 
-      <!-- Selector de dueño existente -->
-      <div id="selectorDueno" class="mb-3">
-        <select id="persona" class="form-select">
+      <div id="selectorDueno">
+        <select id="persona" class="form-select mb-2">
           <option disabled selected>Cargando personas...</option>
         </select>
       </div>
 
-      <!-- Formulario nuevo dueño (oculto por defecto) -->
       <div id="formNuevoDueno" style="display:none;">
         <div class="row g-2">
-          <div class="col-6">
-            <input class="form-control" id="d_nombres"   placeholder="Nombres *">
-          </div>
-          <div class="col-6">
-            <input class="form-control" id="d_apellidos" placeholder="Apellidos *">
-          </div>
+          <div class="col-6"><input class="form-control" id="d_nombres"   placeholder="Nombres *"></div>
+          <div class="col-6"><input class="form-control" id="d_apellidos" placeholder="Apellidos *"></div>
           <div class="col-5">
             <select class="form-select" id="d_tipoDoc">
-              <option value="CC">CC</option>
-              <option value="CE">CE</option>
-              <option value="TI">TI</option>
-              <option value="Pasaporte">Pasaporte</option>
+              <option value="CC">CC</option><option value="CE">CE</option>
+              <option value="TI">TI</option><option value="Pasaporte">Pasaporte</option>
             </select>
           </div>
-          <div class="col-7">
-            <input class="form-control" id="d_documento"  placeholder="N° Documento *">
-          </div>
-          <div class="col-12">
-            <input class="form-control" id="d_direccion"  placeholder="Dirección">
-          </div>
-          <div class="col-6">
-            <input class="form-control" id="d_telefono"   placeholder="Teléfono" type="tel">
-          </div>
-          <div class="col-6">
-            <input class="form-control" id="d_ciudad"     placeholder="Ciudad">
-          </div>
-          <div class="col-6">
-            <input class="form-control" id="d_usuario"    placeholder="Usuario *" autocomplete="off">
-          </div>
-          <div class="col-6">
-            <input class="form-control" id="d_contrasena" placeholder="Contraseña *" type="password">
-          </div>
+          <div class="col-7"><input class="form-control" id="d_documento" placeholder="N° Documento *"></div>
+          <div class="col-12"><input class="form-control" id="d_direccion" placeholder="Dirección"></div>
+          <div class="col-6"><input class="form-control" id="d_telefono"  placeholder="Teléfono" type="tel"></div>
+          <div class="col-6"><input class="form-control" id="d_ciudad"    placeholder="Ciudad"></div>
+          <div class="col-6"><input class="form-control" id="d_usuario"   placeholder="Usuario *" autocomplete="off"></div>
+          <div class="col-6"><input class="form-control" id="d_contrasena" placeholder="Contraseña *" type="password"></div>
         </div>
       </div>
-    </div>
 
-    <!-- ══════════════ 2. DATOS DE LA MASCOTA ══════════════ -->
+      <button type="button" class="btn btn-pwa-primary w-100 mt-3" onclick="validarPaso1()">
+        Siguiente → Mascota
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════ PASO 2: MASCOTA ══════ -->
+  <div id="paso2" style="display:none;">
     <div class="card-pwa">
-      <div class="seccion-titulo">🐾 Datos de la Mascota</div>
+      <div class="seccion-titulo">🐾 Paso 2 — Datos de la mascota</div>
       <div class="row g-2">
-        <div class="col-12">
-          <input class="form-control" id="m_nombre" placeholder="Nombre de la mascota *" required>
-        </div>
+        <div class="col-12"><input class="form-control" id="m_nombre" placeholder="Nombre *"></div>
         <div class="col-4">
-          <select class="form-select" id="m_tipo" required>
+          <select class="form-select" id="m_tipo">
             <option value="" disabled selected>Especie *</option>
-            <option value="PERRO">Perro</option>
-            <option value="GATO">Gato</option>
-            <option value="PAJARO">Pájaro</option>
-            <option value="CONEJO">Conejo</option>
+            <option value="PERRO">Perro</option><option value="GATO">Gato</option>
+            <option value="PAJARO">Pájaro</option><option value="CONEJO">Conejo</option>
             <option value="OTRO">Otro</option>
           </select>
         </div>
         <div class="col-4">
-          <select class="form-select" id="m_genero" required>
+          <select class="form-select" id="m_genero">
             <option value="" disabled selected>Género *</option>
-            <option value="MACHO">Macho</option>
-            <option value="HEMBRA">Hembra</option>
+            <option value="MACHO">Macho</option><option value="HEMBRA">Hembra</option>
           </select>
         </div>
-        <div class="col-4">
-          <input class="form-control" id="m_edad" type="number" step="0.5" min="0" placeholder="Edad *">
-        </div>
+        <div class="col-4"><input class="form-control" id="m_edad" type="number" step="0.5" min="0" placeholder="Edad *"></div>
+      </div>
+      <!-- Foto de la mascota (se sube a Cloudinary → URL) -->
+      <div class="mt-3">
+        <label class="form-label small fw-bold">Foto de la mascota <small class="text-muted">(opcional — se subirá a Cloudinary)</small></label>
+        <input type="file" id="fotoMascota" class="form-control form-control-sm" accept="image/*">
+        <img id="prevMascota" class="foto-preview mt-2 d-none" alt="Foto mascota">
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn btn-pwa-outline" onclick="irPaso(1)">← Volver</button>
+        <button type="button" class="btn btn-pwa-primary flex-fill" onclick="validarPaso2()">Siguiente → Foto censo</button>
       </div>
     </div>
+  </div>
 
-    <!-- ══════════════ 3. FOTOGRAFÍA ══════════════ -->
+  <!-- ══════ PASO 3: FOTO DEL CENSO ══════ -->
+  <div id="paso3" style="display:none;">
     <div class="card-pwa">
-      <div class="seccion-titulo">📸 Fotografía del Censo <small style="font-weight:400;">(máx. 50 KB)</small></div>
-
-      <!-- Cámara (del proyecto de referencia pwa_008) -->
+      <div class="seccion-titulo">📸 Paso 3 — Foto del censo <small style="font-weight:400;">(máx. 50 KB)</small></div>
       <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
-        <select id="cameraSelect" class="form-select" style="width:auto; font-size:.85rem;">
+        <select id="cameraSelect" class="form-select" style="width:auto;font-size:.85rem;">
           <option value="environment">Cámara trasera</option>
           <option value="user">Cámara frontal</option>
         </select>
-        <button type="button" id="btnCamara" class="btn btn-secondary btn-sm">📷 Abrir cámara</button>
-        <button type="button" id="btnFoto"   class="btn btn-danger   btn-sm" style="display:none;">🔴 Tomar foto</button>
+        <button type="button" id="btnCamara" class="btn btn-pwa-secondary btn-sm">📷 Abrir cámara</button>
+        <button type="button" id="btnFoto"   class="btn btn-pwa-danger   btn-sm" style="display:none;">🔴 Tomar foto</button>
       </div>
-      <video  id="video"  width="100%" autoplay style="display:none; border-radius:8px; margin-bottom:6px;"></video>
+      <video  id="video"  width="100%" autoplay style="display:none;border-radius:8px;margin-bottom:6px;"></video>
       <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-
-      <!-- O subir archivo -->
       <div class="mt-2">
         <label class="form-label small text-muted">O sube desde galería:</label>
         <input type="file" id="inputFoto" class="form-control form-control-sm" accept="image/*">
       </div>
       <div id="fotoInfo" class="form-text mt-1"></div>
-      <img id="fotoPreview" class="foto-preview mt-2 d-none" alt="Vista previa">
+      <img id="fotoPreview" class="foto-preview mt-2 d-none" alt="Vista previa censo">
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn btn-pwa-outline" onclick="irPaso(2)">← Volver</button>
+        <button type="button" class="btn btn-pwa-primary flex-fill" onclick="validarPaso3()">Siguiente → Ubicación</button>
+      </div>
     </div>
+  </div>
 
-    <!-- ══════════════ 4. UBICACIÓN GPS + MAPA ══════════════ -->
+  <!-- ══════ PASO 4: GPS + GUARDAR ══════ -->
+  <div id="paso4" style="display:none;">
     <div class="card-pwa">
-      <div class="seccion-titulo">📍 Ubicación del Censo</div>
-      <button type="button" id="btnUbicacion" class="btn btn-secondary mb-3 w-100" onclick="obtenerUbicacion()">
+      <div class="seccion-titulo">📍 Paso 4 — Ubicación y guardar</div>
+      <button type="button" id="btnUbicacion" class="btn btn-pwa-secondary w-100 mb-3" onclick="obtenerUbicacion()">
         📍 Detectar mi ubicación actual
       </button>
       <div id="coords" class="form-text mb-2"></div>
-      <!-- Mini mapa que muestra el punto exacto antes de guardar -->
       <div id="mapCenso"></div>
-    </div>
-
-    <!-- ══════════════ 5. ENVIAR ══════════════ -->
-    <div class="card-pwa">
-      <p class="text-muted small mb-3">
-        <!-- Color: <span style="background:#C5C2FF;color:#3a3670;padding:1px 8px;border-radius:4px;border:1px solid #7A75C9;">#C5C2FF</span> -->
+      <p class="text-muted small mt-3 mb-2">
+        🏷️ Grupo: <strong>PWA_GRUPO_08</strong> ·
+        Color: <span style="background:#C5C2FF;color:#3a3670;padding:1px 8px;border-radius:4px;border:1px solid #7A75C9;">#C5C2FF</span>
       </p>
-      <button type="submit" class="btn btn-pwa-primary w-100" style="font-size:1.1rem; padding:.7rem;">
-        💾 Guardar Censo
-      </button>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-pwa-outline" onclick="irPaso(3)">← Volver</button>
+        <button type="button" id="btnGuardar" class="btn btn-pwa-primary flex-fill" onclick="guardarCenso()">
+          💾 Guardar Censo
+        </button>
+      </div>
     </div>
-
-  </form>
+  </div>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../js/sync.js"></script>
@@ -189,38 +182,89 @@
 
 <script>
 // ============================================================
-// censo.js inline — todo el formulario en una sola página
+// Configuración (RF06)
 // ============================================================
-
-const ID_PROYECTO    = 'PWA_GRUPO_01';
+const ID_PROYECTO    = 'PWA_GRUPO_08';
 const COLOR_PROYECTO = '#C5C2FF';
 
 if (!localStorage.getItem('token')) window.location.href = '../login.html';
 
-let latActual    = null;
-let lonActual    = null;
-let imagenBase64 = '';
-let miniMapa     = null;
-let modoNuevoDueno = false;
+let latActual        = null;
+let lonActual        = null;
+let imagenBase64     = '';   // foto del censo (Base64)
+let fotoMascotaB64   = '';   // foto de la mascota (se subirá a Cloudinary)
+let miniMapa         = null;
+let modoNuevoDueno   = false;
 
-// ---- Inicialización ----
 document.addEventListener('DOMContentLoaded', async () => {
   await cargarPersonasSelector();
-  document.getElementById('censoForm').addEventListener('submit', guardarCenso);
-  document.getElementById('inputFoto').addEventListener('change', manejarFotoArchivo);
+  document.getElementById('inputFoto').addEventListener('change', manejarFotoCenso);
+  document.getElementById('fotoMascota').addEventListener('change', manejarFotoMascota);
   if (typeof actualizarBadgeEstado === 'function') actualizarBadgeEstado();
 });
 
-// ---- Toggle: dueño existente / nuevo ----
-function toggleDueno(modo) {
-  modoNuevoDueno = (modo === 'nuevo');
-  document.getElementById('selectorDueno').style.display  = modoNuevoDueno ? 'none' : '';
-  document.getElementById('formNuevoDueno').style.display = modoNuevoDueno ? ''     : 'none';
-  document.getElementById('btnUsarExistente').className = 'btn btn-sm ' + (modoNuevoDueno ? 'btn-outline-secondary' : 'btn-pwa-primary');
-  document.getElementById('btnNuevoDueno').className    = 'btn btn-sm ' + (modoNuevoDueno ? 'btn-pwa-primary'       : 'btn-outline-secondary');
+// ============================================================
+// Navegación por pasos
+// ============================================================
+function irPaso(n) {
+  for (let i = 1; i <= 4; i++)
+    document.getElementById('paso' + i).style.display = i === n ? '' : 'none';
+  const labels = ['Dueño','Mascota','Foto censo','Ubicación'];
+  document.getElementById('pasoLabel').textContent = `Paso ${n} de 4 — ${labels[n-1]}`;
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('seg' + i).className =
+      'paso-seg' + (i < n ? ' completo' : i === n ? ' activo' : '');
+  }
+  window.scrollTo(0, 0);
 }
 
-// ---- Cargar selector de personas ----
+function validarPaso1() {
+  if (!modoNuevoDueno) {
+    const v = document.getElementById('persona').value;
+    if (!v || v.includes('Cargando') || v.includes('Selecciona')) {
+      mostrarAlerta('censoAlerta','Selecciona un dueño o usa "Registrar nuevo".','danger'); return;
+    }
+  } else {
+    const campos = ['d_nombres','d_apellidos','d_documento','d_usuario','d_contrasena'];
+    if (campos.some(id => !document.getElementById(id).value.trim())) {
+      mostrarAlerta('censoAlerta','Completa los campos obligatorios del dueño.','danger'); return;
+    }
+  }
+  irPaso(2);
+}
+
+function validarPaso2() {
+  const n = document.getElementById('m_nombre').value.trim();
+  const t = document.getElementById('m_tipo').value;
+  const g = document.getElementById('m_genero').value;
+  const e = parseFloat(document.getElementById('m_edad').value);
+  if (!n || !t || !g || isNaN(e)) {
+    mostrarAlerta('censoAlerta','Completa todos los datos de la mascota.','danger'); return;
+  }
+  irPaso(3);
+}
+
+function validarPaso3() {
+  if (!imagenBase64) {
+    mostrarAlerta('censoAlerta','Toma o sube una fotografía del censo.','danger'); return;
+  }
+  irPaso(4);
+}
+
+// ============================================================
+// Toggle dueño
+// ============================================================
+function toggleDueno(modo) {
+  modoNuevoDueno = modo === 'nuevo';
+  document.getElementById('selectorDueno').style.display   = modoNuevoDueno ? 'none' : '';
+  document.getElementById('formNuevoDueno').style.display  = modoNuevoDueno ? '' : 'none';
+  document.getElementById('btnExistente').className = 'btn btn-sm ' + (modoNuevoDueno ? 'btn-pwa-outline'  : 'btn-pwa-primary');
+  document.getElementById('btnNuevo').className     = 'btn btn-sm ' + (modoNuevoDueno ? 'btn-pwa-primary'  : 'btn-pwa-outline');
+}
+
+// ============================================================
+// Cargar personas
+// ============================================================
 async function cargarPersonasSelector() {
   const sel = document.getElementById('persona');
   sel.innerHTML = '<option disabled selected>Cargando...</option>';
@@ -237,297 +281,268 @@ async function cargarPersonasSelector() {
   }
   sel.innerHTML = '<option disabled selected>Selecciona el dueño</option>';
   personas.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `${p.nombres} ${p.apellidos}`;
-    sel.appendChild(opt);
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = `${p.nombres} ${p.apellidos}`;
+    sel.appendChild(o);
   });
-  if (!personas.length) sel.innerHTML = '<option disabled>Sin personas — usa "Registrar nuevo"</option>';
+  if (!personas.length)
+    sel.innerHTML = '<option disabled>Sin personas — usa "Registrar nuevo"</option>';
 }
 
-// ---- Geolocalización (RF05) ----
+// ============================================================
+// Geolocalización (RF05)
+// ============================================================
 function obtenerUbicacion() {
   const btn = document.getElementById('btnUbicacion');
-  const coordsDiv = document.getElementById('coords');
-  if (!navigator.geolocation) {
-    coordsDiv.innerHTML = '<span class="text-danger">Geolocalización no soportada</span>'; return;
-  }
+  const div = document.getElementById('coords');
+  if (!navigator.geolocation) { div.innerHTML = '<span class="text-danger">No soportado</span>'; return; }
   btn.disabled = true; btn.textContent = '⏳ Detectando...';
   navigator.geolocation.getCurrentPosition(pos => {
     latActual = pos.coords.latitude;
     lonActual = pos.coords.longitude;
-    coordsDiv.innerHTML = `<span class="text-success">📍 Lat: <strong>${latActual.toFixed(6)}</strong> · Lon: <strong>${lonActual.toFixed(6)}</strong> <small>(±${pos.coords.accuracy.toFixed(0)}m)</small></span>`;
+    div.innerHTML = `<span class="text-success">📍 ${latActual.toFixed(6)}, ${lonActual.toFixed(6)} <small>(±${pos.coords.accuracy.toFixed(0)}m)</small></span>`;
     btn.textContent = '✓ Ubicación obtenida';
-    btn.classList.replace('btn-secondary','btn-success');
-
-    // Mostrar mini mapa Leaflet con el pin
+    btn.classList.replace('btn-pwa-secondary','btn-success');
     if (miniMapa) { miniMapa.remove(); miniMapa = null; }
     miniMapa = L.map('mapCenso').setView([latActual, lonActual], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(miniMapa);
-    const icono = L.divIcon({
-      className: '',
-      html: `<svg width="28" height="36" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-        <path d="M16 0 C7.16 0 0 7.16 0 16 C0 27 16 40 16 40 C16 40 32 27 32 16 C32 7.16 24.84 0 16 0Z" fill="${COLOR_PROYECTO}" stroke="#7A75C9" stroke-width="2.5"/>
-        <text x="16" y="22" text-anchor="middle" font-size="14" fill="white">🐾</text></svg>`,
-      iconSize: [28,36], iconAnchor: [14,36]
-    });
-    L.marker([latActual, lonActual], { icon: icono })
-      .bindPopup('<b>Tu ubicación actual</b>').openPopup()
-      .addTo(miniMapa);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(miniMapa);
+    L.marker([latActual, lonActual], { icon: L.divIcon({
+      className:'',
+      html:`<svg width="28" height="36" viewBox="0 0 32 40"><path d="M16 0 C7.16 0 0 7.16 0 16 C0 27 16 40 16 40 C16 40 32 27 32 16 C32 7.16 24.84 0 16 0Z" fill="${COLOR_PROYECTO}" stroke="#7A75C9" stroke-width="2.5"/><text x="16" y="22" text-anchor="middle" font-size="14" fill="white">🐾</text></svg>`,
+      iconSize:[28,36], iconAnchor:[14,36]
+    })}).bindPopup('<b>Tu ubicación</b>').openPopup().addTo(miniMapa);
   }, err => {
-    coordsDiv.innerHTML = `<span class="text-danger">Error: ${err.message}</span>`;
+    div.innerHTML = `<span class="text-danger">${err.message}</span>`;
     btn.disabled = false; btn.textContent = '📍 Reintentar';
   }, { enableHighAccuracy: true, timeout: 12000 });
 }
 
-// ---- Foto desde archivo (RF04) ----
 // ============================================================
-// RF04 — Compresión automática hasta ≤ 50 KB en Base64
-// El spec dice que el Base64 no puede superar 50 KB.
-// Base64 ~1.37x el binario, así que validamos el STRING resultante.
-// Estrategia: comprimir con canvas JPEG reduciendo calidad
-// progresivamente hasta que el Base64 quepa en 50 KB.
-// El usuario NUNCA recibe un rechazo — siempre se comprime.
+// Compresión de foto hasta 50 KB (RF04)
 // ============================================================
+const MAX_B64 = 66000;
 
-// 50 KB en chars Base64 = 50000 / 0.75 ≈ 66666 chars
-const MAX_B64_CHARS = 66000;
-
-/** Convierte y comprime una imagen hasta que su Base64 ≤ 50 KB */
-function comprimirHasta50KB(imgSrc) {
-  return new Promise((resolve) => {
+function comprimirHasta50KB(src) {
+  return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let w = img.naturalWidth  || img.width  || 640;
-      let h = img.naturalHeight || img.height || 480;
-
-      // 1. Reducir dimensiones si la imagen es muy grande
-      const MAX_DIM = 1200;
-      if (w > MAX_DIM || h > MAX_DIM) {
-        const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
+      const cv = document.createElement('canvas');
+      let w = img.naturalWidth || 640, h = img.naturalHeight || 480;
+      if (w > 1200 || h > 1200) { const r = Math.min(1200/w,1200/h); w=Math.round(w*r); h=Math.round(h*r); }
+      cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      let res = null;
+      for (const q of [0.9,0.75,0.6,0.45,0.3,0.15,0.05]) {
+        const b = cv.toDataURL('image/jpeg',q);
+        if (b.length <= MAX_B64) { res=b; break; }
       }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-
-      // 2. Reducir calidad JPEG progresivamente
-      const calidades = [0.9, 0.75, 0.6, 0.45, 0.3, 0.15, 0.05];
-      let resultado = null;
-      for (const q of calidades) {
-        const b64 = canvas.toDataURL('image/jpeg', q);
-        if (b64.length <= MAX_B64_CHARS) { resultado = b64; break; }
+      if (!res) {
+        cv.width=Math.round(w/2); cv.height=Math.round(h/2);
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        res = cv.toDataURL('image/jpeg',0.1);
       }
-
-      // 3. Si aún no cabe, reducir dimensiones a la mitad
-      if (!resultado) {
-        canvas.width  = Math.round(w / 2);
-        canvas.height = Math.round(h / 2);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resultado = canvas.toDataURL('image/jpeg', 0.1);
-      }
-      resolve(resultado);
+      resolve(res);
     };
     img.onerror = () => resolve(null);
-    img.src = imgSrc;
+    img.src = src;
   });
 }
 
-/** Muestra el resultado final en el preview con el tamaño real */
-function mostrarFotoResultado(base64) {
-  const preview = document.getElementById('fotoPreview');
-  const info    = document.getElementById('fotoInfo');
-  const kb      = (base64.length * 0.75 / 1024).toFixed(1); // bytes reales
-  imagenBase64  = base64;
-  preview.src   = base64;
-  preview.classList.remove('d-none');
-  info.innerHTML = `<span class="text-success">✓ ${kb} KB — optimizada y lista</span>`;
-}
-
-// ---- Foto desde archivo (RF04) ----
-function manejarFotoArchivo(e) {
-  const file    = e.target.files[0];
-  const preview = document.getElementById('fotoPreview');
-  const info    = document.getElementById('fotoInfo');
-  if (!file) { imagenBase64 = ''; preview.classList.add('d-none'); return; }
-  if (!file.type.startsWith('image/')) {
-    info.innerHTML = '<span class="text-danger">⚠ Solo se aceptan imágenes.</span>';
-    e.target.value = ''; return;
-  }
-  info.innerHTML = '<span class="text-muted">⏳ Optimizando imagen...</span>';
+// Foto del CENSO (Base64, para el campo fotografiaCenso)
+function manejarFotoCenso(e) {
+  const file = e.target.files[0];
+  if (!file) { imagenBase64=''; document.getElementById('fotoPreview').classList.add('d-none'); return; }
+  document.getElementById('fotoInfo').innerHTML = '<span class="text-muted">⏳ Optimizando...</span>';
   const reader = new FileReader();
   reader.onload = async () => {
-    const comprimida = await comprimirHasta50KB(reader.result);
-    if (!comprimida) {
-      info.innerHTML = '<span class="text-danger">⚠ No se pudo procesar la imagen.</span>';
-      e.target.value = ''; return;
-    }
-    mostrarFotoResultado(comprimida);
+    const c = await comprimirHasta50KB(reader.result);
+    if (!c) { document.getElementById('fotoInfo').innerHTML='<span class="text-danger">Error</span>'; return; }
+    imagenBase64 = c;
+    const kb = (c.length*0.75/1024).toFixed(1);
+    document.getElementById('fotoPreview').src = c;
+    document.getElementById('fotoPreview').classList.remove('d-none');
+    document.getElementById('fotoInfo').innerHTML = `<span class="text-success">✓ ${kb} KB</span>`;
   };
   reader.readAsDataURL(file);
 }
 
-// ---- Foto desde cámara — photo.js llama esta función ----
-window.onFotoCapturada = async function(base64Cruda) {
-  document.getElementById('fotoInfo').innerHTML = '<span class="text-muted">⏳ Optimizando foto...</span>';
-  const comprimida = await comprimirHasta50KB(base64Cruda);
-  if (!comprimida) {
-    mostrarAlerta('censoAlerta', '⚠ No se pudo procesar la foto.', 'danger'); return;
-  }
-  mostrarFotoResultado(comprimida);
+// Foto de la MASCOTA (se previsualizará; se subirá a Cloudinary al guardar)
+function manejarFotoMascota(e) {
+  const file = e.target.files[0];
+  if (!file) { fotoMascotaB64=''; document.getElementById('prevMascota').classList.add('d-none'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    fotoMascotaB64 = reader.result;
+    document.getElementById('prevMascota').src = fotoMascotaB64;
+    document.getElementById('prevMascota').classList.remove('d-none');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Llamado por photo.js (cámara)
+window.onFotoCapturada = async function(b64) {
+  document.getElementById('fotoInfo').innerHTML = '<span class="text-muted">⏳ Optimizando...</span>';
+  const c = await comprimirHasta50KB(b64);
+  if (!c) { mostrarAlerta('censoAlerta','No se pudo procesar la foto.','danger'); return; }
+  imagenBase64 = c;
+  const kb = (c.length*0.75/1024).toFixed(1);
+  document.getElementById('fotoPreview').src = c;
+  document.getElementById('fotoPreview').classList.remove('d-none');
+  document.getElementById('fotoInfo').innerHTML = `<span class="text-success">✓ ${kb} KB</span>`;
 };
 
-// ---- Guardar censo completo (RF02, RF03, RF04, RF05, RF06) ----
-async function guardarCenso(e) {
-  e.preventDefault();
-
-  // Validaciones
-  const mNombre = document.getElementById('m_nombre').value.trim();
-  const mTipo   = document.getElementById('m_tipo').value;
-  const mGenero = document.getElementById('m_genero').value;
-  const mEdad   = parseFloat(document.getElementById('m_edad').value);
-
-  if (!mNombre || !mTipo || !mGenero || isNaN(mEdad)) {
-    mostrarAlerta('censoAlerta','Completa todos los datos de la mascota.','danger'); return;
-  }
-  if (!imagenBase64) {
-    mostrarAlerta('censoAlerta','Debes tomar o subir una fotografía.','danger'); return;
-  }
+// ============================================================
+// Guardar censo — subida inmediata si hay internet (RF03-RF06)
+// Orden: Persona → Mascota → Censo
+// ============================================================
+async function guardarCenso() {
   if (!latActual || !lonActual) {
-    mostrarAlerta('censoAlerta','Debes obtener la ubicación GPS primero.','danger'); return;
+    mostrarAlerta('censoAlerta','Obtén la ubicación GPS primero.','danger'); return;
   }
-
-  const btn = document.querySelector('#censoForm button[type="submit"]');
-  btn.disabled = true; btn.textContent = 'Guardando...';
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
 
   try {
-    let idDueno;
+    const enLinea = navigator.onLine;
 
-    // ---- Paso 1: Persona ----
+    // ══════ PASO 1: Persona ══════
+    let idDueno;
     if (modoNuevoDueno) {
-      const dNombres   = document.getElementById('d_nombres').value.trim();
-      const dApellidos = document.getElementById('d_apellidos').value.trim();
-      const dDocumento = document.getElementById('d_documento').value.trim();
-      const dUsuario   = document.getElementById('d_usuario').value.trim();
-      const dContrasena= document.getElementById('d_contrasena').value;
-      if (!dNombres || !dApellidos || !dDocumento || !dUsuario || !dContrasena) {
-        mostrarAlerta('censoAlerta','Completa todos los datos del dueño (*)','danger');
-        btn.disabled = false; btn.textContent = '💾 Guardar Censo'; return;
-      }
-      idDueno = crypto.randomUUID();
-      const personaPayload = {
-        id: idDueno, nombres: dNombres, apellidos: dApellidos,
+      const id = crypto.randomUUID();
+      const payload = {
+        id,
+        nombres:       document.getElementById('d_nombres').value.trim(),
+        apellidos:     document.getElementById('d_apellidos').value.trim(),
         tipoDocumento: document.getElementById('d_tipoDoc').value,
-        documento: dDocumento,
-        direccion: document.getElementById('d_direccion').value.trim(),
-        telefono:  document.getElementById('d_telefono').value.trim(),
-        ciudad:    document.getElementById('d_ciudad').value.trim(),
-        usuario: dUsuario, contrasena: dContrasena
+        documento:     document.getElementById('d_documento').value.trim(),
+        direccion:     document.getElementById('d_direccion').value.trim(),
+        telefono:      document.getElementById('d_telefono').value.trim(),
+        ciudad:        document.getElementById('d_ciudad').value.trim(),
+        usuario:       document.getElementById('d_usuario').value.trim(),
+        contrasena:    document.getElementById('d_contrasena').value
       };
-      // Guardar local
-      await DB_PERSONAS.put({
-        _id: idDueno, ...personaPayload,
-        contrasenaHash: dContrasena, remoteId: null, syncStatus: 'pending_create'
-      });
-      // Sync inmediato si hay conexión
-      if (navigator.onLine) {
-        const resP = await fetch(`${API_URL}/api/v1/personas`, {
+      await DB_PERSONAS.put({ _id: id, ...payload, contrasenaHash: payload.contrasena, remoteId: null, syncStatus: 'pending_create' });
+      idDueno = id;
+
+      if (enLinea) {
+        btn.textContent = '⏳ Registrando dueño...';
+        const res = await fetch(`${API_URL}/api/v1/personas`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(personaPayload)
+          body: JSON.stringify(payload)
         });
-        if (resP.ok) {
-          const creada = await resP.json();
-          idDueno = creada.id;
-          const docP = await DB_PERSONAS.get(personaPayload.id);
-          delete docP.contrasenaHash;
-          await DB_PERSONAS.put({ ...docP, remoteId: creada.id, syncStatus: 'synced' });
-        }
+        if (!res.ok) throw new Error('Dueño: ' + await res.text());
+        const creada = await res.json();
+        idDueno = creada.id;
+        const doc = await DB_PERSONAS.get(id);
+        delete doc.contrasenaHash;
+        await DB_PERSONAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
       }
     } else {
       idDueno = document.getElementById('persona').value;
-      if (!idDueno || idDueno === 'Cargando...' || idDueno === 'Selecciona el dueño') {
-        mostrarAlerta('censoAlerta','Selecciona el dueño o registra uno nuevo.','danger');
-        btn.disabled = false; btn.textContent = '💾 Guardar Censo'; return;
+    }
+
+    // ══════ PASO 2: Mascota ══════
+    const mId = crypto.randomUUID();
+    const mNombre = document.getElementById('m_nombre').value.trim();
+
+    // Subir foto de mascota a Cloudinary si hay foto y conexión
+    let fotoMascotaUrl = `https://placehold.co/150x150/C5C2FF/7A75C9?text=${encodeURIComponent(mNombre)}`;
+    if (fotoMascotaB64 && enLinea) {
+      try {
+        btn.textContent = '⏳ Subiendo foto de mascota...';
+        fotoMascotaUrl = await subirFotoCloudinary(fotoMascotaB64);
+      } catch(e) {
+        console.warn('Cloudinary falló, usando placeholder:', e.message);
       }
     }
 
-    // ---- Paso 2: Mascota ----
-    const idMascota = crypto.randomUUID();
     const mascotaPayload = {
-      id: idMascota, nombre: mNombre, tipo: mTipo, genero: mGenero, edad: mEdad, fotografia: ''
+      nombre:     mNombre,
+      tipo:       document.getElementById('m_tipo').value,
+      genero:     document.getElementById('m_genero').value,
+      edad:       parseFloat(document.getElementById('m_edad').value),
+      fotografia: fotoMascotaUrl   // URL (Cloudinary o placeholder)
     };
-    await DB_MASCOTAS.put({
-      _id: idMascota, nombre: mNombre, tipo: mTipo, genero: mGenero, edad: mEdad,
-      fotografia: '', remoteId: null, syncStatus: 'pending_create'
-    });
-    let idMascotaRemoto = idMascota;
-    if (navigator.onLine) {
-      const resM = await fetch(`${API_URL}/api/v1/mascotas`, {
+    await DB_MASCOTAS.put({ _id: mId, ...mascotaPayload, remoteId: null, syncStatus: 'pending_create' });
+    let idMascota = mId;
+
+    if (enLinea) {
+      btn.textContent = '⏳ Registrando mascota...';
+      const res = await fetch(`${API_URL}/api/v1/mascotas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(mascotaPayload)
       });
-      if (resM.ok) {
-        const creada = await resM.json();
-        idMascotaRemoto = creada.id;
-        const docM = await DB_MASCOTAS.get(idMascota);
-        await DB_MASCOTAS.put({ ...docM, remoteId: creada.id, syncStatus: 'synced' });
-      }
+      if (!res.ok) throw new Error('Mascota: ' + await res.text());
+      const creada = await res.json();
+      idMascota = creada.id;
+      const doc = await DB_MASCOTAS.get(mId);
+      await DB_MASCOTAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
     }
 
-    // ---- Paso 3: Censo ----
-    const idCenso = crypto.randomUUID();
+    // ══════ PASO 3: Censo ══════
+    const cId = crypto.randomUUID();
     const censoPayload = {
-      id: idCenso, idMascota: idMascotaRemoto, idDueno,
-      fotografia: imagenBase64, lat: latActual, lon: lonActual,
-      idProyecto: ID_PROYECTO, color: COLOR_PROYECTO
+      // SIN id — el backend lo genera
+      idMascota:  idMascota,
+      idDueno:    idDueno,
+      fotografia: imagenBase64,    // Base64 — el censo sí acepta esto
+      lat:        latActual,
+      lon:        lonActual,
+      idProyecto: ID_PROYECTO,
+      color:      COLOR_PROYECTO
     };
-    await DB_CENSOS.put({
-      _id: idCenso, ...censoPayload, remoteId: null, syncStatus: 'pending_create'
-    });
-    if (navigator.onLine) {
+    await DB_CENSOS.put({ _id: cId, ...censoPayload, remoteId: null, syncStatus: 'pending_create' });
+
+    if (enLinea) {
+      btn.textContent = '⏳ Guardando censo...';
       const token = localStorage.getItem('token');
-      const resC = await fetch(`${API_URL}/api/v1/censos`, {
+      const res = await fetch(`${API_URL}/api/v1/censos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify(censoPayload)
       });
-      if (resC.ok) {
-        const creado = await resC.json();
-        const docC = await DB_CENSOS.get(idCenso);
-        await DB_CENSOS.put({ ...docC, remoteId: creado.id, syncStatus: 'synced' });
-      }
+      if (!res.ok) throw new Error('Censo: ' + await res.text());
+      const creado = await res.json();
+      const doc = await DB_CENSOS.get(cId);
+      await DB_CENSOS.put({ ...doc, remoteId: creado.id, syncStatus: 'synced' });
     }
 
-    // ---- Éxito ----
-    const msg = navigator.onLine
-      ? '✅ Censo registrado y sincronizado correctamente.'
-      : '⏳ Censo guardado localmente. Se sincronizará al recuperar conexión.';
-    mostrarAlerta('censoAlerta', msg, navigator.onLine ? 'success' : 'warning');
+    mostrarAlerta('censoAlerta',
+      enLinea ? '✅ Censo registrado y sincronizado.' : '⏳ Guardado localmente. Se sincronizará al recuperar conexión.',
+      enLinea ? 'success' : 'warning'
+    );
     limpiarFormulario();
 
   } catch(err) {
     console.error('[Censo]', err);
-    mostrarAlerta('censoAlerta','Error: ' + err.message,'danger');
+    mostrarAlerta('censoAlerta', 'Error: ' + err.message, 'danger');
   } finally {
     btn.disabled = false; btn.textContent = '💾 Guardar Censo';
   }
 }
 
+// ============================================================
+// Limpiar
+// ============================================================
 function limpiarFormulario() {
-  document.getElementById('censoForm').reset();
-  imagenBase64 = ''; latActual = null; lonActual = null;
-  document.getElementById('fotoPreview').classList.add('d-none');
+  ['m_nombre','m_edad','d_nombres','d_apellidos','d_documento','d_usuario','d_contrasena','d_telefono','d_ciudad','d_direccion']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('m_tipo').value   = '';
+  document.getElementById('m_genero').value = '';
+  imagenBase64 = ''; fotoMascotaB64 = ''; latActual = null; lonActual = null;
+  ['fotoPreview','prevMascota'].forEach(id => document.getElementById(id).classList.add('d-none'));
   document.getElementById('fotoInfo').innerHTML = '';
-  document.getElementById('coords').innerHTML = '';
-  const btn = document.getElementById('btnUbicacion');
-  btn.textContent = '📍 Detectar mi ubicación actual';
-  btn.className = 'btn btn-secondary mb-3 w-100';
-  btn.disabled = false;
+  document.getElementById('coords').innerHTML   = '';
+  document.getElementById('inputFoto').value    = '';
+  document.getElementById('fotoMascota').value  = '';
+  const b = document.getElementById('btnUbicacion');
+  b.textContent = '📍 Detectar mi ubicación actual';
+  b.className   = 'btn btn-pwa-secondary w-100 mb-3';
+  b.disabled    = false;
   if (miniMapa) { miniMapa.remove(); miniMapa = null; }
   toggleDueno('existente');
+  irPaso(1);
   cargarPersonasSelector();
 }
 
@@ -537,7 +552,8 @@ function mostrarAlerta(id, msg, tipo) {
   el.className = `alert alert-${tipo}`;
   el.textContent = msg;
   el.classList.remove('d-none');
-  if (tipo === 'success') setTimeout(() => el.classList.add('d-none'), 5000);
+  window.scrollTo(0,0);
+  if (tipo === 'success') setTimeout(() => el.classList.add('d-none'), 6000);
 }
 </script>
 </body>

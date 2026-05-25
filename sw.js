@@ -18,27 +18,55 @@ function limpiarCache(cacheName, maxItems) {
     });
 }
 
+
 // ---- INSTALL ----
-const cacheStatic = caches.open(CACHE_STATIC).then(cache => {
-    const assets = [ '/', '/index.html', '/login.html', '/not-found.html',
-        '/views/censo.html', '/views/mapa.html', '/views/mis-censos.html',
-        '/js/db.js', '/js/sync.js', '/js/auth.js', '/js/photo.js',
-        '/css/styles.css', '/manifest.json' ];
-    return Promise.allSettled(assets.map(url => cache.add(url).catch(e =>
-        console.warn('[SW] No se pudo cachear:', url)
-    )));
+self.addEventListener('install', e => {
+
+    const cacheStatic = caches.open(CACHE_STATIC).then(cache => {
+
+        const assets = [
+            '/',
+            '/index.html',
+            '/login.html',
+            '/not-found.html',
+            '/views/censo.html',
+            '/views/mapa.html',
+            '/views/mis-censos.html',
+            '/js/db.js',
+            '/js/sync.js',
+            '/js/auth.js',
+            '/js/photo.js',
+            '/css/styles.css',
+            '/manifest.json'
+        ];
+
+        return Promise.allSettled(
+            assets.map(url =>
+                cache.add(url).catch(err =>
+                    console.warn('[SW] No se pudo cachear:', url)
+                )
+            )
+        );
+    });
+
+    const cacheInmutable = caches.open(CACHE_INMUTABLE)
+        .then(cache => cache.addAll([
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css',
+            'https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+            'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
+        ]))
+        .catch(err => console.warn('[SW] CDN cache parcial:', err));
+
+    e.waitUntil(
+        Promise.all([cacheStatic, cacheInmutable])
+    );
+
+    self.skipWaiting();
 });
 
-    const cacheInmutable = caches.open(CACHE_INMUTABLE).then(cache => cache.addAll([
-        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css',
-        'https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js',
-        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-        'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
-    ]).catch(err => console.warn('[SW] CDN cache parcial:', err)));
-
-    e.waitUntil(Promise.all([cacheStatic, cacheInmutable]));
-    self.skipWaiting();
+   
 
 
 // ---- ACTIVATE ----

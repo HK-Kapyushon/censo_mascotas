@@ -1,9 +1,35 @@
 // ============================================================
 // sync.js — SyncManager
-// Sincronización bidireccional completa (CP-02)
 // ============================================================
 
 const API_URL = 'https://elprofehugo.online';
+
+// ============================================================
+// Cloudinary — subir foto y obtener URL pública
+// Reemplaza TU_CLOUD_NAME y TU_UPLOAD_PRESET con los tuyos
+// ============================================================
+const CLOUDINARY_CLOUD_NAME  = 'djqdqiix7';
+const CLOUDINARY_UPLOAD_PRESET = 'mascotas_pwa';
+
+async function subirFotoCloudinary(base64) {
+    // Quitar prefijo data:image/jpeg;base64,
+    const base64Limpio = base64.split(',')[1] || base64;
+    const formData = new FormData();
+    formData.append('file',           'data:image/jpeg;base64,' + base64Limpio);
+    formData.append('upload_preset',  CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder',         'mascotas_pwa');
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error('Cloudinary error: ' + err);
+    }
+    const data = await res.json();
+    return data.secure_url; // URL pública https://res.cloudinary.com/...
+}
 
 function getHeaders(conAuth = true) {
     const h = { 'Content-Type': 'application/json' };
@@ -30,19 +56,14 @@ class SyncManager {
     _updateStatus() {
         const badge = document.getElementById('syncStatus');
         if (!badge) return;
-        if (navigator.onLine) {
-            badge.textContent = 'En línea';
-            badge.className = 'badge bg-success ms-2';
-        } else {
-            badge.textContent = 'Sin conexión';
-            badge.className = 'badge bg-warning text-dark ms-2';
-        }
+        badge.textContent = navigator.onLine ? 'En línea' : 'Sin conexión';
+        badge.className   = 'badge ms-2 ' + (navigator.onLine ? 'bg-success' : 'bg-warning text-dark');
     }
 
     _setSyncingUI(syncing) {
         const btn = document.getElementById('btnSync');
         if (!btn) return;
-        btn.disabled = syncing;
+        btn.disabled    = syncing;
         btn.textContent = syncing ? 'Sincronizando...' : 'Sincronizar';
     }
 
@@ -51,13 +72,11 @@ class SyncManager {
         this.syncing = true;
         this._setSyncingUI(true);
         try {
-            // Orden importante: personas → mascotas → censos
-            // El censo necesita los remoteId de persona y mascota
             await this.syncPersonas();
             await this.syncMascotas();
             await this.syncCensos();
-            if (typeof cargarMascotas === 'function') cargarMascotas();
-            if (typeof cargarPersonas === 'function') cargarPersonas();
+            if (typeof cargarMascotas  === 'function') cargarMascotas();
+            if (typeof cargarPersonas  === 'function') cargarPersonas();
             if (typeof cargarMisCensos === 'function') cargarMisCensos();
         } catch (err) {
             console.error('[Sync] Error general:', err);
@@ -67,117 +86,18 @@ class SyncManager {
         }
     }
 
-    // ---- MASCOTAS ----
-    async syncMascotas() {
-        const result  = await DB_MASCOTAS.allDocs({ include_docs: true });
-        const pending = result.rows.filter(r =>
-            r.doc.syncStatus && r.doc.syncStatus !== 'synced' &&
-            !r.doc._id.startsWith('_design')
-        );
-
-        for (const row of pending) {
-            const doc = row.doc;
-            try {
-                if (doc.syncStatus === 'pending_create') {
-                    // NO enviar id — el backend lo genera
-                    const payload = {
-                        nombre:     doc.nombre,
-                        tipo:       doc.tipo,
-                        genero:     doc.genero || '',
-                        edad:       doc.edad,
-                        fotografia: doc.fotografia || ''
-                    };
-                    console.log('[Sync Mascotas] payload:', JSON.stringify(payload));
-                    const res = await fetch(`${API_URL}/api/v1/mascotas`, {
-                        method: 'POST',
-                        headers: getHeaders(true),
-                        body: JSON.stringify(payload)
-                    });
-                    if (!res.ok) {
-                        const detalle = await res.text().catch(() => '');
-                        throw new Error(`HTTP ${res.status}: ${detalle}`);
-                    }
-                    const created = await res.json();
-                    // Guardar el id que asignó el backend como remoteId
-                    await DB_MASCOTAS.put({ ...doc, remoteId: created.id, syncStatus: 'synced' });
-                    console.log('[Sync Mascotas] ✓ creada, remoteId:', created.id);
-
-                } else if (doc.syncStatus === 'pending_update' && doc.remoteId) {
-                    const res = await fetch(`${API_URL}/api/v1/mascotas/${doc.remoteId}`, {
-                        method: 'PATCH',
-                        headers: getHeaders(true),
-                        body: JSON.stringify({
-                            nombre: doc.nombre,
-                            tipo:   doc.tipo,
-                            genero: doc.genero,
-                            edad:   doc.edad
-                        })
-                    });
-                    if (!res.ok) {
-                        const detalle = await res.text().catch(() => '');
-                        throw new Error(`HTTP ${res.status}: ${detalle}`);
-                    }
-                    await DB_MASCOTAS.put({ ...doc, syncStatus: 'synced' });
-
-                } else if (doc.syncStatus === 'pending_delete') {
-                    if (doc.remoteId) {
-                        const res = await fetch(`${API_URL}/api/v1/mascotas/${doc.remoteId}`, {
-                            method: 'DELETE',
-                            headers: getHeaders(true)
-                        });
-                        if (!res.ok && res.status !== 404) {
-                            throw new Error(`HTTP ${res.status}`);
-                        }
-                    }
-                    await DB_MASCOTAS.remove(doc);
-                }
-            } catch (err) {
-                console.error('[Sync Mascotas] doc', doc._id, err);
-            }
-        }
-
-        // Sync-down: traer mascotas del servidor
-        try {
-            const res = await fetch(`${API_URL}/api/v1/mascotas`, { headers: getHeaders(false) });
-            if (!res.ok) return;
-            const remotas = await res.json();
-            const localResult = await DB_MASCOTAS.allDocs({ include_docs: true });
-            const remoteIdMap = {};
-            for (const row of localResult.rows) {
-                if (row.doc.remoteId) remoteIdMap[row.doc.remoteId] = row.doc;
-            }
-            for (const r of remotas) {
-                if (!remoteIdMap[r.id]) {
-                    await DB_MASCOTAS.put({
-                        _id:        'remote-' + r.id,
-                        nombre:     r.nombre,
-                        tipo:       r.tipo,
-                        genero:     r.genero || '',
-                        edad:       r.edad,
-                        fotografia: r.fotografia || '',
-                        remoteId:   r.id,
-                        syncStatus: 'synced'
-                    });
-                }
-            }
-        } catch (err) {
-            console.warn('[Sync Mascotas down]', err);
-        }
-    }
-
     // ---- PERSONAS ----
     async syncPersonas() {
         const result  = await DB_PERSONAS.allDocs({ include_docs: true });
         const pending = result.rows.filter(r =>
-            r.doc.syncStatus === 'pending_create' &&
-            !r.doc._id.startsWith('_design')
+            r.doc.syncStatus === 'pending_create' && !r.doc._id.startsWith('_design')
         );
-
         for (const row of pending) {
             const doc = row.doc;
             try {
-                // NO enviar id — el backend lo genera
+                // La spec dice que personas SÍ envía id generado desde el front
                 const payload = {
+                    id:            doc._id,
                     nombres:       doc.nombres,
                     apellidos:     doc.apellidos,
                     tipoDocumento: doc.tipoDocumento,
@@ -188,108 +108,162 @@ class SyncManager {
                     usuario:       doc.usuario,
                     contrasena:    doc.contrasenaHash || ''
                 };
-                console.log('[Sync Personas] payload:', JSON.stringify({...payload, contrasena: '***'}));
                 const res = await fetch(`${API_URL}/api/v1/personas`, {
-                    method: 'POST',
-                    headers: getHeaders(false),
+                    method: 'POST', headers: getHeaders(false),
                     body: JSON.stringify(payload)
                 });
                 if (!res.ok) {
-                    const detalle = await res.text().catch(() => '');
-                    throw new Error(`HTTP ${res.status}: ${detalle}`);
+                    const det = await res.text().catch(() => '');
+                    throw new Error(`HTTP ${res.status}: ${det}`);
                 }
                 const created = await res.json();
                 const docLimpio = { ...doc };
                 delete docLimpio.contrasenaHash;
                 await DB_PERSONAS.put({ ...docLimpio, remoteId: created.id, syncStatus: 'synced' });
-                console.log('[Sync Personas] ✓ creada, remoteId:', created.id);
+                console.log('[Sync Personas] ✓', created.id);
             } catch (err) {
-                console.error('[Sync Personas] doc', doc._id, err);
+                console.error('[Sync Personas]', doc._id, err.message);
             }
         }
 
-        // Sync-down personas
+        // Sync-down
         try {
             const res = await fetch(`${API_URL}/api/v1/personas`, { headers: getHeaders(false) });
             if (!res.ok) return;
             const remotas = await res.json();
-            const localResult = await DB_PERSONAS.allDocs({ include_docs: true });
-            const remoteIdMap = {};
-            for (const row of localResult.rows) {
-                if (row.doc.remoteId) remoteIdMap[row.doc.remoteId] = row.doc;
-            }
+            const local   = await DB_PERSONAS.allDocs({ include_docs: true });
+            const map     = {};
+            local.rows.forEach(r => { if (r.doc.remoteId) map[r.doc.remoteId] = true; });
             for (const r of remotas) {
-                if (!remoteIdMap[r.id]) {
+                if (!map[r.id]) {
                     await DB_PERSONAS.put({
-                        _id:          'remote-' + r.id,
-                        nombres:      r.nombres,
-                        apellidos:    r.apellidos,
-                        tipoDocumento:r.tipoDocumento,
-                        documento:    r.documento,
-                        direccion:    r.direccion,
-                        telefono:     r.telefono,
-                        ciudad:       r.ciudad,
-                        usuario:      r.usuario,
-                        remoteId:     r.id,
-                        syncStatus:   'synced'
+                        _id: 'remote-' + r.id,
+                        nombres: r.nombres, apellidos: r.apellidos,
+                        tipoDocumento: r.tipoDocumento, documento: r.documento,
+                        direccion: r.direccion, telefono: r.telefono,
+                        ciudad: r.ciudad, usuario: r.usuario,
+                        remoteId: r.id, syncStatus: 'synced'
                     });
                 }
             }
-        } catch (err) {
-            console.warn('[Sync Personas down]', err);
+        } catch (err) { console.warn('[Sync Personas down]', err.message); }
+    }
+
+    // ---- MASCOTAS ----
+    async syncMascotas() {
+        const result  = await DB_MASCOTAS.allDocs({ include_docs: true });
+        const pending = result.rows.filter(r =>
+            r.doc.syncStatus && r.doc.syncStatus !== 'synced' && !r.doc._id.startsWith('_design')
+        );
+        for (const row of pending) {
+            const doc = row.doc;
+            try {
+                if (doc.syncStatus === 'pending_create') {
+
+                    // Subir foto a Cloudinary si es Base64
+                    let fotoUrl = doc.fotografia || '';
+                    if (fotoUrl.startsWith('data:')) {
+                        fotoUrl = await subirFotoCloudinary(fotoUrl);
+                    } else if (!fotoUrl.startsWith('http')) {
+                        fotoUrl = `https://placehold.co/150x150/C5C2FF/7A75C9?text=${encodeURIComponent(doc.nombre)}`;
+                    }
+
+                    // La spec dice que mascotas SÍ envía id generado desde el front
+                    const payload = {
+                        id:         doc._id,
+                        nombre:     doc.nombre,
+                        tipo:       doc.tipo,
+                        genero:     doc.genero || '',
+                        edad:       doc.edad,
+                        fotografia: fotoUrl
+                    };
+                    const res = await fetch(`${API_URL}/api/v1/mascotas`, {
+                        method: 'POST', headers: getHeaders(true),
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) {
+                        const det = await res.text().catch(() => '');
+                        throw new Error(`HTTP ${res.status}: ${det}`);
+                    }
+                    const created = await res.json();
+                    await DB_MASCOTAS.put({ ...doc, fotografia: fotoUrl, remoteId: created.id, syncStatus: 'synced' });
+                    console.log('[Sync Mascotas] ✓', created.id);
+
+                } else if (doc.syncStatus === 'pending_update' && doc.remoteId) {
+                    const res = await fetch(`${API_URL}/api/v1/mascotas/${doc.remoteId}`, {
+                        method: 'PATCH', headers: getHeaders(true),
+                        body: JSON.stringify({ nombre: doc.nombre, tipo: doc.tipo, genero: doc.genero, edad: doc.edad })
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    await DB_MASCOTAS.put({ ...doc, syncStatus: 'synced' });
+
+                } else if (doc.syncStatus === 'pending_delete') {
+                    if (doc.remoteId) {
+                        const res = await fetch(`${API_URL}/api/v1/mascotas/${doc.remoteId}`, {
+                            method: 'DELETE', headers: getHeaders(true)
+                        });
+                        if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+                    }
+                    await DB_MASCOTAS.remove(doc);
+                }
+            } catch (err) {
+                console.error('[Sync Mascotas]', doc._id, err.message);
+            }
         }
+
+        // Sync-down
+        try {
+            const res = await fetch(`${API_URL}/api/v1/mascotas`, { headers: getHeaders(false) });
+            if (!res.ok) return;
+            const remotas = await res.json();
+            const local   = await DB_MASCOTAS.allDocs({ include_docs: true });
+            const map     = {};
+            local.rows.forEach(r => { if (r.doc.remoteId) map[r.doc.remoteId] = true; });
+            for (const r of remotas) {
+                if (!map[r.id]) {
+                    await DB_MASCOTAS.put({
+                        _id: 'remote-' + r.id,
+                        nombre: r.nombre, tipo: r.tipo, genero: r.genero || '',
+                        edad: r.edad, fotografia: r.fotografia || '',
+                        remoteId: r.id, syncStatus: 'synced'
+                    });
+                }
+            }
+        } catch (err) { console.warn('[Sync Mascotas down]', err.message); }
     }
 
     // ---- CENSOS ----
     async syncCensos() {
         const result  = await DB_CENSOS.allDocs({ include_docs: true });
         const pending = result.rows.filter(r =>
-            r.doc.syncStatus === 'pending_create' &&
-            !r.doc._id.startsWith('_design')
+            r.doc.syncStatus === 'pending_create' && !r.doc._id.startsWith('_design')
         );
-
         for (const row of pending) {
             const doc = row.doc;
             try {
-                // Resolver remoteId de mascota y persona
-                // Si el id guardado es un _id local, buscar su remoteId
+                // Resolver remoteId de mascota
                 let idMascota = doc.idMascota;
-                let idDueno   = doc.idDueno;
+                const allM = await DB_MASCOTAS.allDocs({ include_docs: true });
+                const foundM = allM.rows.find(r =>
+                    r.doc._id === doc.idMascota || r.doc.remoteId === doc.idMascota
+                );
+                if (foundM && foundM.doc.remoteId) idMascota = foundM.doc.remoteId;
 
-                // Buscar remoteId de mascota
-                try {
-                    const mDoc = await DB_MASCOTAS.get(doc.idMascota).catch(() => null);
-                    if (mDoc && mDoc.remoteId) idMascota = mDoc.remoteId;
-                    else {
-                        // Buscar por remoteId en todos los docs
-                        const allM = await DB_MASCOTAS.allDocs({ include_docs: true });
-                        const found = allM.rows.find(r =>
-                            r.doc.remoteId === doc.idMascota || r.doc._id === doc.idMascota
-                        );
-                        if (found && found.doc.remoteId) idMascota = found.doc.remoteId;
-                    }
-                } catch(e) {}
+                // Resolver remoteId de persona
+                let idDueno = doc.idDueno;
+                const allP = await DB_PERSONAS.allDocs({ include_docs: true });
+                const foundP = allP.rows.find(r =>
+                    r.doc._id === doc.idDueno || r.doc.remoteId === doc.idDueno
+                );
+                if (foundP && foundP.doc.remoteId) idDueno = foundP.doc.remoteId;
 
-                // Buscar remoteId de persona
-                try {
-                    const pDoc = await DB_PERSONAS.get(doc.idDueno).catch(() => null);
-                    if (pDoc && pDoc.remoteId) idDueno = pDoc.remoteId;
-                    else {
-                        const allP = await DB_PERSONAS.allDocs({ include_docs: true });
-                        const found = allP.rows.find(r =>
-                            r.doc.remoteId === doc.idDueno || r.doc._id === doc.idDueno
-                        );
-                        if (found && found.doc.remoteId) idDueno = found.doc.remoteId;
-                    }
-                } catch(e) {}
-
-                // Si alguno sigue siendo un id local (sin remoteId), esperar al próximo sync
-                if (!idMascota || !idDueno) {
-                    console.warn('[Sync Censos] Esperando remoteId de mascota/persona...');
+                // Si la mascota aún no se sincronizó, esperar
+                if (!foundM || !foundM.doc.remoteId) {
+                    console.warn('[Sync Censos] Mascota aún pendiente, esperando...');
                     continue;
                 }
 
-                // NO enviar id — el backend lo genera
+                // Censos NO envía id — lo genera el backend
                 const payload = {
                     idMascota:  idMascota,
                     idDueno:    idDueno,
@@ -299,30 +273,23 @@ class SyncManager {
                     idProyecto: doc.idProyecto,
                     color:      doc.color
                 };
-                console.log('[Sync Censos] payload (sin foto):', {
-                    ...payload, fotografia: payload.fotografia ? '[base64]' : null
-                });
                 const res = await fetch(`${API_URL}/api/v1/censos`, {
-                    method: 'POST',
-                    headers: getHeaders(true),
+                    method: 'POST', headers: getHeaders(true),
                     body: JSON.stringify(payload)
                 });
                 if (!res.ok) {
-                    const detalle = await res.text().catch(() => '');
-                    throw new Error(`HTTP ${res.status}: ${detalle}`);
+                    const det = await res.text().catch(() => '');
+                    throw new Error(`HTTP ${res.status}: ${det}`);
                 }
                 const created = await res.json();
                 await DB_CENSOS.put({ ...doc, remoteId: created.id, syncStatus: 'synced' });
-                console.log('[Sync Censos] ✓ creado, remoteId:', created.id);
+                console.log('[Sync Censos] ✓', created.id);
             } catch (err) {
-                console.error('[Sync Censos] doc', doc._id, err);
+                console.error('[Sync Censos]', doc._id, err.message);
             }
         }
     }
 }
 
-// Instancia global
 const syncManager = new SyncManager();
-
-// Función global para botón manual
 function sincronizarTodo() { syncManager.sync(); }
