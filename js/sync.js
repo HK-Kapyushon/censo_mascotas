@@ -2,6 +2,12 @@
 // sync.js — SyncManager
 // ============================================================
 
+ if(navigator.serviceWorker){
+    navigator.serviceWorker.register('/sw.js')
+    console.log('Service Worker registrado');
+ }
+
+ 
 const API_URL = 'https://elprofehugo.online';
 
 // ============================================================

@@ -37,7 +37,6 @@
 <div class="container mt-3 pb-4" style="max-width:640px;">
   <div id="censoAlerta" class="alert d-none"></div>
 
-  <!-- Indicador de pasos -->
   <div class="paso-bar">
     <div class="paso-seg activo" id="seg1"></div>
     <div class="paso-seg"        id="seg2"></div>
@@ -50,39 +49,35 @@
   <div id="paso1">
     <div class="card-pwa">
       <div class="seccion-titulo">👤 Paso 1 — Dueño de la mascota</div>
-
       <div class="mb-3">
         <div class="d-flex gap-2">
           <button type="button" class="btn btn-pwa-primary btn-sm" id="btnExistente" onclick="toggleDueno('existente')">Seleccionar existente</button>
           <button type="button" class="btn btn-pwa-outline  btn-sm" id="btnNuevo"    onclick="toggleDueno('nuevo')">Registrar nuevo</button>
         </div>
       </div>
-
       <div id="selectorDueno">
         <select id="persona" class="form-select mb-2">
           <option disabled selected>Cargando personas...</option>
         </select>
       </div>
-
       <div id="formNuevoDueno" style="display:none;">
         <div class="row g-2">
           <div class="col-6"><input class="form-control" id="d_nombres"   placeholder="Nombres *"></div>
           <div class="col-6"><input class="form-control" id="d_apellidos" placeholder="Apellidos *"></div>
           <div class="col-5">
             <select class="form-select" id="d_tipoDoc">
-              <option value="CC">CC</option><option value="CE">CE</option>
-              <option value="TI">TI</option><option value="Pasaporte">Pasaporte</option>
+              <option value="CC">CC</option>
+              <option value="CE">CE</option>
+              <option value="TI">TI</option>
+              <option value="Pasaporte">Pasaporte</option>
             </select>
           </div>
           <div class="col-7"><input class="form-control" id="d_documento" placeholder="N° Documento *"></div>
           <div class="col-12"><input class="form-control" id="d_direccion" placeholder="Dirección"></div>
           <div class="col-6"><input class="form-control" id="d_telefono"  placeholder="Teléfono" type="tel"></div>
           <div class="col-6"><input class="form-control" id="d_ciudad"    placeholder="Ciudad"></div>
-          <div class="col-6"><input class="form-control" id="d_usuario"   placeholder="Usuario *" autocomplete="off"></div>
-          <div class="col-6"><input class="form-control" id="d_contrasena" placeholder="Contraseña *" type="password"></div>
         </div>
       </div>
-
       <button type="button" class="btn btn-pwa-primary w-100 mt-3" onclick="validarPaso1()">
         Siguiente → Mascota
       </button>
@@ -98,25 +93,43 @@
         <div class="col-4">
           <select class="form-select" id="m_tipo">
             <option value="" disabled selected>Especie *</option>
-            <option value="PERRO">Perro</option><option value="GATO">Gato</option>
-            <option value="PAJARO">Pájaro</option><option value="CONEJO">Conejo</option>
+            <option value="PERRO">Perro</option>
+            <option value="GATO">Gato</option>
+            <option value="PAJARO">Pájaro</option>
+            <option value="CONEJO">Conejo</option>
             <option value="OTRO">Otro</option>
           </select>
         </div>
         <div class="col-4">
           <select class="form-select" id="m_genero">
             <option value="" disabled selected>Género *</option>
-            <option value="MACHO">Macho</option><option value="HEMBRA">Hembra</option>
+            <option value="MACHO">Macho</option>
+            <option value="HEMBRA">Hembra</option>
           </select>
         </div>
         <div class="col-4"><input class="form-control" id="m_edad" type="number" step="0.5" min="0" placeholder="Edad *"></div>
       </div>
-      <!-- Foto de la mascota (se sube a Cloudinary → URL) -->
+
+      <!-- Foto mascota con cámara y galería -->
       <div class="mt-3">
-        <label class="form-label small fw-bold">Foto de la mascota <small class="text-muted">(opcional — se subirá a Cloudinary)</small></label>
-        <input type="file" id="fotoMascota" class="form-control form-control-sm" accept="image/*">
+        <label class="form-label small fw-bold">Foto de la mascota <small class="text-muted">(opcional — Cloudinary)</small></label>
+        <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
+          <select id="cameraSelectMascota" class="form-select" style="width:auto;font-size:.85rem;">
+            <option value="environment">Cámara trasera</option>
+            <option value="user">Cámara frontal</option>
+          </select>
+          <button type="button" id="btnCamaraMascota" class="btn btn-pwa-secondary btn-sm">📷 Abrir cámara</button>
+          <button type="button" id="btnFotoMascota"   class="btn btn-pwa-danger   btn-sm" style="display:none;">🔴 Tomar foto</button>
+        </div>
+        <video  id="videoMascota"  width="100%" autoplay style="display:none;border-radius:8px;margin-bottom:6px;"></video>
+        <canvas id="canvasMascota" width="320" height="240" style="display:none;"></canvas>
+        <div class="mt-1">
+          <label class="form-label small text-muted">O sube desde galería:</label>
+          <input type="file" id="fotoMascota" class="form-control form-control-sm" accept="image/*">
+        </div>
         <img id="prevMascota" class="foto-preview mt-2 d-none" alt="Foto mascota">
       </div>
+
       <div class="d-flex gap-2 mt-3">
         <button type="button" class="btn btn-pwa-outline" onclick="irPaso(1)">← Volver</button>
         <button type="button" class="btn btn-pwa-primary flex-fill" onclick="validarPaso2()">Siguiente → Foto censo</button>
@@ -181,27 +194,67 @@
 <script src="../js/photo.js"></script>
 
 <script>
-// ============================================================
-// Configuración (RF06)
-// ============================================================
 const ID_PROYECTO    = 'PWA_GRUPO_08';
 const COLOR_PROYECTO = '#C5C2FF';
 
 if (!localStorage.getItem('token')) window.location.href = '../login.html';
 
-let latActual        = null;
-let lonActual        = null;
-let imagenBase64     = '';   // foto del censo (Base64)
-let fotoMascotaB64   = '';   // foto de la mascota (se subirá a Cloudinary)
-let miniMapa         = null;
-let modoNuevoDueno   = false;
+let latActual      = null;
+let lonActual      = null;
+let imagenBase64   = '';
+let fotoMascotaB64 = '';
+let miniMapa       = null;
+let modoNuevoDueno = false;
+let streamMascota  = null;  // stream cámara mascota
 
 document.addEventListener('DOMContentLoaded', async () => {
   await cargarPersonasSelector();
   document.getElementById('inputFoto').addEventListener('change', manejarFotoCenso);
   document.getElementById('fotoMascota').addEventListener('change', manejarFotoMascota);
+  initCamaraMascota();
   if (typeof actualizarBadgeEstado === 'function') actualizarBadgeEstado();
 });
+
+// ============================================================
+// Cámara para foto de MASCOTA
+// ============================================================
+function initCamaraMascota() {
+  const btnC   = document.getElementById('btnCamaraMascota');
+  const btnF   = document.getElementById('btnFotoMascota');
+  const video  = document.getElementById('videoMascota');
+  const canvas = document.getElementById('canvasMascota');
+  const sel    = document.getElementById('cameraSelectMascota');
+
+  btnC.onclick = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('La cámara solo funciona en HTTPS o localhost.\nUsa la opción de galería para subir una foto.');
+      return;
+    }
+    try {
+      if (streamMascota) streamMascota.getTracks().forEach(t => t.stop());
+      streamMascota = await navigator.mediaDevices.getUserMedia({ video: { facingMode: sel.value } });
+      video.srcObject = streamMascota;
+      video.style.display = 'block';
+      btnF.style.display  = 'inline-block';
+      btnC.textContent    = '🔄 Cambiar cámara';
+    } catch(err) {
+      alert('No se pudo acceder a la cámara: ' + err.message);
+    }
+  };
+
+  btnF.onclick = () => {
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    fotoMascotaB64 = canvas.toDataURL('image/jpeg', 0.85);
+    // Detener cámara
+    if (streamMascota) { streamMascota.getTracks().forEach(t => t.stop()); streamMascota = null; }
+    video.style.display = 'none';
+    btnF.style.display  = 'none';
+    btnC.textContent    = '📷 Abrir cámara';
+    // Mostrar preview
+    document.getElementById('prevMascota').src = fotoMascotaB64;
+    document.getElementById('prevMascota').classList.remove('d-none');
+  };
+}
 
 // ============================================================
 // Navegación por pasos
@@ -215,6 +268,13 @@ function irPaso(n) {
     document.getElementById('seg' + i).className =
       'paso-seg' + (i < n ? ' completo' : i === n ? ' activo' : '');
   }
+  // Detener cámara mascota si se cambia de paso
+  if (n !== 2 && streamMascota) {
+    streamMascota.getTracks().forEach(t => t.stop()); streamMascota = null;
+    document.getElementById('videoMascota').style.display = 'none';
+    document.getElementById('btnFotoMascota').style.display = 'none';
+    document.getElementById('btnCamaraMascota').textContent = '📷 Abrir cámara';
+  }
   window.scrollTo(0, 0);
 }
 
@@ -222,12 +282,16 @@ function validarPaso1() {
   if (!modoNuevoDueno) {
     const v = document.getElementById('persona').value;
     if (!v || v.includes('Cargando') || v.includes('Selecciona')) {
-      mostrarAlerta('censoAlerta','Selecciona un dueño o usa "Registrar nuevo".','danger'); return;
+      mostrarAlerta('censoAlerta', 'Selecciona un dueño o usa "Registrar nuevo".', 'danger');
+      return;
     }
   } else {
-    const campos = ['d_nombres','d_apellidos','d_documento','d_usuario','d_contrasena'];
-    if (campos.some(id => !document.getElementById(id).value.trim())) {
-      mostrarAlerta('censoAlerta','Completa los campos obligatorios del dueño.','danger'); return;
+    const nombres   = document.getElementById('d_nombres').value.trim();
+    const apellidos = document.getElementById('d_apellidos').value.trim();
+    const documento = document.getElementById('d_documento').value.trim();
+    if (!nombres || !apellidos || !documento) {
+      mostrarAlerta('censoAlerta', 'Completa nombres, apellidos y documento del dueño.', 'danger');
+      return;
     }
   }
   irPaso(2);
@@ -239,31 +303,33 @@ function validarPaso2() {
   const g = document.getElementById('m_genero').value;
   const e = parseFloat(document.getElementById('m_edad').value);
   if (!n || !t || !g || isNaN(e)) {
-    mostrarAlerta('censoAlerta','Completa todos los datos de la mascota.','danger'); return;
+    mostrarAlerta('censoAlerta', 'Completa todos los datos de la mascota.', 'danger');
+    return;
   }
   irPaso(3);
 }
 
 function validarPaso3() {
   if (!imagenBase64) {
-    mostrarAlerta('censoAlerta','Toma o sube una fotografía del censo.','danger'); return;
+    mostrarAlerta('censoAlerta', 'Toma o sube una fotografía del censo.', 'danger');
+    return;
   }
   irPaso(4);
 }
 
 // ============================================================
-// Toggle dueño
+// Toggle dueño existente / nuevo
 // ============================================================
 function toggleDueno(modo) {
   modoNuevoDueno = modo === 'nuevo';
-  document.getElementById('selectorDueno').style.display   = modoNuevoDueno ? 'none' : '';
-  document.getElementById('formNuevoDueno').style.display  = modoNuevoDueno ? '' : 'none';
+  document.getElementById('selectorDueno').style.display  = modoNuevoDueno ? 'none' : '';
+  document.getElementById('formNuevoDueno').style.display = modoNuevoDueno ? ''     : 'none';
   document.getElementById('btnExistente').className = 'btn btn-sm ' + (modoNuevoDueno ? 'btn-pwa-outline'  : 'btn-pwa-primary');
   document.getElementById('btnNuevo').className     = 'btn btn-sm ' + (modoNuevoDueno ? 'btn-pwa-primary'  : 'btn-pwa-outline');
 }
 
 // ============================================================
-// Cargar personas
+// Cargar selector de personas
 // ============================================================
 async function cargarPersonasSelector() {
   const sel = document.getElementById('persona');
@@ -303,14 +369,14 @@ function obtenerUbicacion() {
     lonActual = pos.coords.longitude;
     div.innerHTML = `<span class="text-success">📍 ${latActual.toFixed(6)}, ${lonActual.toFixed(6)} <small>(±${pos.coords.accuracy.toFixed(0)}m)</small></span>`;
     btn.textContent = '✓ Ubicación obtenida';
-    btn.classList.replace('btn-pwa-secondary','btn-success');
+    btn.classList.replace('btn-pwa-secondary', 'btn-success');
     if (miniMapa) { miniMapa.remove(); miniMapa = null; }
     miniMapa = L.map('mapCenso').setView([latActual, lonActual], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(miniMapa);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(miniMapa);
     L.marker([latActual, lonActual], { icon: L.divIcon({
-      className:'',
-      html:`<svg width="28" height="36" viewBox="0 0 32 40"><path d="M16 0 C7.16 0 0 7.16 0 16 C0 27 16 40 16 40 C16 40 32 27 32 16 C32 7.16 24.84 0 16 0Z" fill="${COLOR_PROYECTO}" stroke="#7A75C9" stroke-width="2.5"/><text x="16" y="22" text-anchor="middle" font-size="14" fill="white">🐾</text></svg>`,
-      iconSize:[28,36], iconAnchor:[14,36]
+      className: '',
+      html: `<svg width="28" height="36" viewBox="0 0 32 40"><path d="M16 0 C7.16 0 0 7.16 0 16 C0 27 16 40 16 40 C16 40 32 27 32 16 C32 7.16 24.84 0 16 0Z" fill="${COLOR_PROYECTO}" stroke="#7A75C9" stroke-width="2.5"/><text x="16" y="22" text-anchor="middle" font-size="14" fill="white">🐾</text></svg>`,
+      iconSize: [28,36], iconAnchor: [14,36]
     })}).bindPopup('<b>Tu ubicación</b>').openPopup().addTo(miniMapa);
   }, err => {
     div.innerHTML = `<span class="text-danger">${err.message}</span>`;
@@ -319,7 +385,7 @@ function obtenerUbicacion() {
 }
 
 // ============================================================
-// Compresión de foto hasta 50 KB (RF04)
+// Compresión foto hasta 50 KB (RF04)
 // ============================================================
 const MAX_B64 = 66000;
 
@@ -329,18 +395,18 @@ function comprimirHasta50KB(src) {
     img.onload = () => {
       const cv = document.createElement('canvas');
       let w = img.naturalWidth || 640, h = img.naturalHeight || 480;
-      if (w > 1200 || h > 1200) { const r = Math.min(1200/w,1200/h); w=Math.round(w*r); h=Math.round(h*r); }
-      cv.width=w; cv.height=h;
-      cv.getContext('2d').drawImage(img,0,0,w,h);
+      if (w > 1200 || h > 1200) { const r = Math.min(1200/w, 1200/h); w = Math.round(w*r); h = Math.round(h*r); }
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
       let res = null;
-      for (const q of [0.9,0.75,0.6,0.45,0.3,0.15,0.05]) {
-        const b = cv.toDataURL('image/jpeg',q);
-        if (b.length <= MAX_B64) { res=b; break; }
+      for (const q of [0.9, 0.75, 0.6, 0.45, 0.3, 0.15, 0.05]) {
+        const b = cv.toDataURL('image/jpeg', q);
+        if (b.length <= MAX_B64) { res = b; break; }
       }
       if (!res) {
-        cv.width=Math.round(w/2); cv.height=Math.round(h/2);
-        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-        res = cv.toDataURL('image/jpeg',0.1);
+        cv.width = Math.round(w/2); cv.height = Math.round(h/2);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        res = cv.toDataURL('image/jpeg', 0.1);
       }
       resolve(res);
     };
@@ -349,17 +415,17 @@ function comprimirHasta50KB(src) {
   });
 }
 
-// Foto del CENSO (Base64, para el campo fotografiaCenso)
+// Foto del CENSO — Base64 comprimido
 function manejarFotoCenso(e) {
   const file = e.target.files[0];
-  if (!file) { imagenBase64=''; document.getElementById('fotoPreview').classList.add('d-none'); return; }
+  if (!file) { imagenBase64 = ''; document.getElementById('fotoPreview').classList.add('d-none'); return; }
   document.getElementById('fotoInfo').innerHTML = '<span class="text-muted">⏳ Optimizando...</span>';
   const reader = new FileReader();
   reader.onload = async () => {
     const c = await comprimirHasta50KB(reader.result);
-    if (!c) { document.getElementById('fotoInfo').innerHTML='<span class="text-danger">Error</span>'; return; }
+    if (!c) { document.getElementById('fotoInfo').innerHTML = '<span class="text-danger">Error al procesar</span>'; return; }
     imagenBase64 = c;
-    const kb = (c.length*0.75/1024).toFixed(1);
+    const kb = (c.length * 0.75 / 1024).toFixed(1);
     document.getElementById('fotoPreview').src = c;
     document.getElementById('fotoPreview').classList.remove('d-none');
     document.getElementById('fotoInfo').innerHTML = `<span class="text-success">✓ ${kb} KB</span>`;
@@ -367,10 +433,10 @@ function manejarFotoCenso(e) {
   reader.readAsDataURL(file);
 }
 
-// Foto de la MASCOTA (se previsualizará; se subirá a Cloudinary al guardar)
+// Foto de MASCOTA desde galería
 function manejarFotoMascota(e) {
   const file = e.target.files[0];
-  if (!file) { fotoMascotaB64=''; document.getElementById('prevMascota').classList.add('d-none'); return; }
+  if (!file) { fotoMascotaB64 = ''; document.getElementById('prevMascota').classList.add('d-none'); return; }
   const reader = new FileReader();
   reader.onload = () => {
     fotoMascotaB64 = reader.result;
@@ -380,25 +446,25 @@ function manejarFotoMascota(e) {
   reader.readAsDataURL(file);
 }
 
-// Llamado por photo.js (cámara)
+// Foto del CENSO desde cámara (photo.js)
 window.onFotoCapturada = async function(b64) {
   document.getElementById('fotoInfo').innerHTML = '<span class="text-muted">⏳ Optimizando...</span>';
   const c = await comprimirHasta50KB(b64);
-  if (!c) { mostrarAlerta('censoAlerta','No se pudo procesar la foto.','danger'); return; }
+  if (!c) { mostrarAlerta('censoAlerta', 'No se pudo procesar la foto.', 'danger'); return; }
   imagenBase64 = c;
-  const kb = (c.length*0.75/1024).toFixed(1);
+  const kb = (c.length * 0.75 / 1024).toFixed(1);
   document.getElementById('fotoPreview').src = c;
   document.getElementById('fotoPreview').classList.remove('d-none');
   document.getElementById('fotoInfo').innerHTML = `<span class="text-success">✓ ${kb} KB</span>`;
 };
 
 // ============================================================
-// Guardar censo — subida inmediata si hay internet (RF03-RF06)
-// Orden: Persona → Mascota → Censo
+// Guardar censo (RF03-RF06) — subida inmediata si hay internet
+// Sin internet: guarda local y sincroniza al reconectar
 // ============================================================
 async function guardarCenso() {
   if (!latActual || !lonActual) {
-    mostrarAlerta('censoAlerta','Obtén la ubicación GPS primero.','danger'); return;
+    mostrarAlerta('censoAlerta', 'Obtén la ubicación GPS primero.', 'danger'); return;
   }
   const btn = document.getElementById('btnGuardar');
   btn.disabled = true; btn.textContent = '⏳ Guardando...';
@@ -406,25 +472,21 @@ async function guardarCenso() {
   try {
     const enLinea = navigator.onLine;
 
-    // ══════ PASO 1: Persona ══════
+    // ══ PERSONA (dueño) ══
     let idDueno;
     if (modoNuevoDueno) {
       const id = crypto.randomUUID();
       const payload = {
-        id,
         nombres:       document.getElementById('d_nombres').value.trim(),
         apellidos:     document.getElementById('d_apellidos').value.trim(),
         tipoDocumento: document.getElementById('d_tipoDoc').value,
         documento:     document.getElementById('d_documento').value.trim(),
         direccion:     document.getElementById('d_direccion').value.trim(),
         telefono:      document.getElementById('d_telefono').value.trim(),
-        ciudad:        document.getElementById('d_ciudad').value.trim(),
-        usuario:       document.getElementById('d_usuario').value.trim(),
-        contrasena:    document.getElementById('d_contrasena').value
+        ciudad:        document.getElementById('d_ciudad').value.trim()
       };
-      await DB_PERSONAS.put({ _id: id, ...payload, contrasenaHash: payload.contrasena, remoteId: null, syncStatus: 'pending_create' });
+      await DB_PERSONAS.put({ _id: id, ...payload, remoteId: null, syncStatus: 'pending_create' });
       idDueno = id;
-
       if (enLinea) {
         btn.textContent = '⏳ Registrando dueño...';
         const res = await fetch(`${API_URL}/api/v1/personas`, {
@@ -435,18 +497,16 @@ async function guardarCenso() {
         const creada = await res.json();
         idDueno = creada.id;
         const doc = await DB_PERSONAS.get(id);
-        delete doc.contrasenaHash;
         await DB_PERSONAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
       }
     } else {
       idDueno = document.getElementById('persona').value;
     }
 
-    // ══════ PASO 2: Mascota ══════
-    const mId = crypto.randomUUID();
+    // ══ MASCOTA ══
+    const mId     = crypto.randomUUID();
     const mNombre = document.getElementById('m_nombre').value.trim();
 
-    // Subir foto de mascota a Cloudinary si hay foto y conexión
     let fotoMascotaUrl = `https://placehold.co/150x150/C5C2FF/7A75C9?text=${encodeURIComponent(mNombre)}`;
     if (fotoMascotaB64 && enLinea) {
       try {
@@ -462,9 +522,9 @@ async function guardarCenso() {
       tipo:       document.getElementById('m_tipo').value,
       genero:     document.getElementById('m_genero').value,
       edad:       parseFloat(document.getElementById('m_edad').value),
-      fotografia: fotoMascotaUrl   // URL (Cloudinary o placeholder)
+      fotografia: fotoMascotaUrl
     };
-    await DB_MASCOTAS.put({ _id: mId, ...mascotaPayload, remoteId: null, syncStatus: 'pending_create' });
+    await DB_MASCOTAS.put({ _id: mId, ...mascotaPayload, fotoBase64: fotoMascotaB64, remoteId: null, syncStatus: 'pending_create' });
     let idMascota = mId;
 
     if (enLinea) {
@@ -480,13 +540,12 @@ async function guardarCenso() {
       await DB_MASCOTAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
     }
 
-    // ══════ PASO 3: Censo ══════
+    // ══ CENSO ══
     const cId = crypto.randomUUID();
     const censoPayload = {
-      // SIN id — el backend lo genera
       idMascota:  idMascota,
       idDueno:    idDueno,
-      fotografia: imagenBase64,    // Base64 — el censo sí acepta esto
+      fotografia: imagenBase64,
       lat:        latActual,
       lon:        lonActual,
       idProyecto: ID_PROYECTO,
@@ -509,7 +568,9 @@ async function guardarCenso() {
     }
 
     mostrarAlerta('censoAlerta',
-      enLinea ? '✅ Censo registrado y sincronizado.' : '⏳ Guardado localmente. Se sincronizará al recuperar conexión.',
+      enLinea
+        ? '✅ Censo registrado y sincronizado correctamente.'
+        : '⏳ Guardado localmente. Se sincronizará al recuperar conexión.',
       enLinea ? 'success' : 'warning'
     );
     limpiarFormulario();
@@ -523,19 +584,24 @@ async function guardarCenso() {
 }
 
 // ============================================================
-// Limpiar
+// Limpiar formulario
 // ============================================================
 function limpiarFormulario() {
-  ['m_nombre','m_edad','d_nombres','d_apellidos','d_documento','d_usuario','d_contrasena','d_telefono','d_ciudad','d_direccion']
-    .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['m_nombre','m_edad','d_nombres','d_apellidos','d_documento','d_telefono','d_ciudad','d_direccion']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('m_tipo').value   = '';
   document.getElementById('m_genero').value = '';
   imagenBase64 = ''; fotoMascotaB64 = ''; latActual = null; lonActual = null;
   ['fotoPreview','prevMascota'].forEach(id => document.getElementById(id).classList.add('d-none'));
-  document.getElementById('fotoInfo').innerHTML = '';
-  document.getElementById('coords').innerHTML   = '';
-  document.getElementById('inputFoto').value    = '';
-  document.getElementById('fotoMascota').value  = '';
+  document.getElementById('fotoInfo').innerHTML   = '';
+  document.getElementById('coords').innerHTML     = '';
+  document.getElementById('inputFoto').value      = '';
+  document.getElementById('fotoMascota').value    = '';
+  // Detener cámara mascota si quedó abierta
+  if (streamMascota) { streamMascota.getTracks().forEach(t => t.stop()); streamMascota = null; }
+  document.getElementById('videoMascota').style.display  = 'none';
+  document.getElementById('btnFotoMascota').style.display = 'none';
+  document.getElementById('btnCamaraMascota').textContent = '📷 Abrir cámara';
   const b = document.getElementById('btnUbicacion');
   b.textContent = '📍 Detectar mi ubicación actual';
   b.className   = 'btn btn-pwa-secondary w-100 mb-3';
@@ -552,7 +618,7 @@ function mostrarAlerta(id, msg, tipo) {
   el.className = `alert alert-${tipo}`;
   el.textContent = msg;
   el.classList.remove('d-none');
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
   if (tipo === 'success') setTimeout(() => el.classList.add('d-none'), 6000);
 }
 </script>

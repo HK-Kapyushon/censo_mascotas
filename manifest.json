@@ -1,48 +1,28 @@
 {
-  "name": "Censo de Mascotas",
-  "short_name": "CensoMask",
-  "description": "Aplicación PWA para el censo de mascotas - UPTC",
-  "start_url": "/index.html",
-  "display": "standalone",
-  "background_color": "#f0eef8",
-  "theme_color": "#534AB7",
-  "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "assets/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "assets/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "assets/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "assets/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "assets/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "assets/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    }
-  ]
+    "theme_color": "#8936FF",
+    "background_color": "#2EC6FE",
+    "icons": [
+        {
+            "purpose": "maskable",
+            "sizes": "512x512",
+            "src": "../assets/icons/icon512_maskable.png",
+            "type": "image/png"
+        },
+        {
+            "purpose": "any",
+            "sizes": "512x512",
+            "src": "../assets/icons/icon512_rounded.png",
+            "type": "image/png"
+        }
+    ],
+    "orientation": "portrait",
+    "display": "standalone",
+    "dir": "auto",
+    "lang": "es-ES",
+    "name": "propwa008",
+    "short_name": "grupo8",
+    "start_url": "http://127.0.0.1:5501/login.html",
+    "scope": "http://127.0.0.1:5501/login.html",
+    "description": "Censo de mascotas",
+    "id": "http://127.0.0.1:5501/login.html"
 }

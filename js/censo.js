@@ -5,7 +5,7 @@
 
 // Configuración del proyecto (RF06) — valores asignados por el docente
 const ID_PROYECTO    = 'PWA_GRUPO_08';   // ← Cambia al ID que te asigne el docente
-const COLOR_PROYECTO = '#FF5733';        // ← Cambia al color que te asigne el docente
+const COLOR_PROYECTO = '#C5C2FF';        // ← Cambia al color que te asigne el docente
 
 let latActual  = null;
 let lonActual  = null;
