@@ -24,10 +24,31 @@
 * { box-sizing: border-box; }
 
 body {
-  background: var(--color-bg);
+  background-color: var(--color-bg);
   font-family: 'Nunito', 'Segoe UI', sans-serif;
   color: var(--color-text);
   min-height: 100vh;
+}
+
+/* Fondo con imagen aplicado mediante la clase `has-bg`.
+   Se excluye `login.html` donde no se añadirá la clase. */
+body.has-bg {
+  background-color: var(--color-bg);
+  position: relative;
+}
+
+/* Imagen de fondo en pseudo-elemento para controlar solo su opacidad */
+body.has-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url('/img/imgBackground.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.15; /* 30% */
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* ================================================================

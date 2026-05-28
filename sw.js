@@ -18,12 +18,10 @@ function limpiarCache(cacheName, maxItems) {
     });
 }
 
-
 // ---- INSTALL ----
 self.addEventListener('install', e => {
-
     const cacheStatic = caches.open(CACHE_STATIC).then(cache => {
-
+        // Cachear cada asset individualmente para que un fallo no rompa todo
         const assets = [
             '/',
             '/index.html',
@@ -37,37 +35,29 @@ self.addEventListener('install', e => {
             '/js/auth.js',
             '/js/photo.js',
             '/css/styles.css',
-            '/manifest.json'
+            '/manifest.json',
         ];
-
-        return Promise.allSettled(
-            assets.map(url =>
-                cache.add(url).catch(err =>
-                    console.warn('[SW] No se pudo cachear:', url)
-                )
-            )
-        );
+        return Promise.allSettled(assets.map(url => cache.add(url).catch(e => {
+            console.warn('[SW] No se pudo cachear:', url, e.message);
+        })));
     });
 
-    const cacheInmutable = caches.open(CACHE_INMUTABLE)
-        .then(cache => cache.addAll([
+    const cacheInmutable = caches.open(CACHE_INMUTABLE).then(cache => {
+        const cdnAssets = [
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css',
             'https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js',
             'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
             'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-            'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
-        ]))
-        .catch(err => console.warn('[SW] CDN cache parcial:', err));
+            'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap'
+        ];
+        return Promise.allSettled(cdnAssets.map(url => cache.add(url).catch(e => {
+            console.warn('[SW] CDN no cacheado:', url, e.message);
+        })));
+    });
 
-    e.waitUntil(
-        Promise.all([cacheStatic, cacheInmutable])
-    );
-
+    e.waitUntil(Promise.all([cacheStatic, cacheInmutable]));
     self.skipWaiting();
 });
-
-   
-
 
 // ---- ACTIVATE ----
 self.addEventListener('activate', e => {
@@ -101,17 +91,22 @@ self.addEventListener('fetch', e => {
             if (cached) return cached;
             return fetch(e.request).then(response => {
                 if (response && response.status === 200 && response.type !== 'opaque') {
-                    caches.open(CACHE_DYNAMIC).then(cache => {
+                    // Clonar ANTES de retornar — el body solo se puede leer una vez
                     const responseToCache = response.clone();
-                    cache.put(e.request, responseToCache);
+                    caches.open(CACHE_DYNAMIC).then(cache => {
+                        cache.put(e.request, responseToCache);
                         limpiarCache(CACHE_DYNAMIC, 50);
                     });
                 }
                 return response;
             }).catch(() => {
                 if (e.request.headers.get('accept')?.includes('text/html')) {
-                    return caches.match('/not-found.html');
+                    return caches.match('/not-found.html').then(r =>
+                        r || new Response('Sin conexión', { status: 503, headers: { 'Content-Type': 'text/plain' } })
+                    );
                 }
+                // Para imágenes, fuentes, tiles de mapa — devolver respuesta vacía válida
+                return new Response('', { status: 503, headers: { 'Content-Type': 'text/plain' } });
             });
         })
     );

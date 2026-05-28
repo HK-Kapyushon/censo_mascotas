@@ -2,11 +2,7 @@
 // sync.js — SyncManager
 // ============================================================
 
- if(navigator.serviceWorker){
-    navigator.serviceWorker.register('/sw.js')
-    console.log('Service Worker registrado');
- }
-
+ 
  
 const API_URL = 'https://elprofehugo.online';
 
@@ -103,7 +99,6 @@ class SyncManager {
             try {
                 // La spec dice que personas SÍ envía id generado desde el front
                 const payload = {
-                    id:            doc._id,
                     nombres:       doc.nombres,
                     apellidos:     doc.apellidos,
                     tipoDocumento: doc.tipoDocumento,
@@ -176,7 +171,6 @@ class SyncManager {
 
                     // La spec dice que mascotas SÍ envía id generado desde el front
                     const payload = {
-                        id:         doc._id,
                         nombre:     doc.nombre,
                         tipo:       doc.tipo,
                         genero:     doc.genero || '',
@@ -248,21 +242,34 @@ class SyncManager {
             const doc = row.doc;
             try {
                 // Resolver remoteId de mascota
-                let idMascota = doc.idMascota;
-                const allM = await DB_MASCOTAS.allDocs({ include_docs: true });
-                const foundM = allM.rows.find(r =>
-                    r.doc._id === doc.idMascota || r.doc.remoteId === doc.idMascota
-                );
-                if (foundM && foundM.doc.remoteId) idMascota = foundM.doc.remoteId;
+                let idMascota = doc.idMascota;  // ← declarar aquí
+        let idDueno   = doc.idDueno;   // ← declarar aquí
+idMascota = doc.idMascota;
+const allM = await DB_MASCOTAS.allDocs({ include_docs: true });
+const foundM = allM.rows.find(r =>
+    r.doc._id === doc.idMascota ||
+    r.doc.remoteId === doc.idMascota
+);
+if (foundM && foundM.doc.remoteId) {
+    idMascota = foundM.doc.remoteId;
+} else if (!idMascota || idMascota.length !== 36) {
+    console.warn('[Sync Censos] Sin remoteId de mascota, esperando...');
+    continue;
+}
 
-                // Resolver remoteId de persona
-                let idDueno = doc.idDueno;
-                const allP = await DB_PERSONAS.allDocs({ include_docs: true });
-                const foundP = allP.rows.find(r =>
-                    r.doc._id === doc.idDueno || r.doc.remoteId === doc.idDueno
-                );
-                if (foundP && foundP.doc.remoteId) idDueno = foundP.doc.remoteId;
-
+// Resolver remoteId de persona
+idDueno = doc.idDueno;
+const allP = await DB_PERSONAS.allDocs({ include_docs: true });
+const foundP = allP.rows.find(r =>
+    r.doc._id === doc.idDueno ||
+    r.doc.remoteId === doc.idDueno
+);
+if (foundP && foundP.doc.remoteId) {
+    idDueno = foundP.doc.remoteId;
+} else if (!idDueno || idDueno.length !== 36) {
+    console.warn('[Sync Censos] Sin remoteId de persona, esperando...');
+    continue;
+}
                 // Si la mascota aún no se sincronizó, esperar
                 if (!foundM || !foundM.doc.remoteId) {
                     console.warn('[Sync Censos] Mascota aún pendiente, esperando...');
@@ -271,7 +278,6 @@ class SyncManager {
 
                 // Censos NO envía id — lo genera el backend
                 const payload = {
-                    idMascota:  idMascota,
                     idDueno:    idDueno,
                     fotografia: doc.fotografia,
                     lat:        doc.lat,

@@ -335,16 +335,35 @@ async function cargarPersonasSelector() {
   const sel = document.getElementById('persona');
   sel.innerHTML = '<option disabled selected>Cargando...</option>';
   let personas = [];
+
   if (navigator.onLine) {
     try {
       const res = await fetch(`${API_URL}/api/v1/personas`);
       if (res.ok) personas = await res.json();
     } catch(e) {}
   }
+
+  // Sin internet: cargar desde PouchDB
   if (!personas.length) {
     const local = await dbObtenerTodos(DB_PERSONAS);
-    personas = local.map(p => ({ id: p.remoteId || p._id, nombres: p.nombres, apellidos: p.apellidos }));
+    personas = local
+      .filter(p => p.nombres && p.apellidos)
+      .map(p => ({ id: p.remoteId || p._id, nombres: p.nombres, apellidos: p.apellidos }));
   }
+
+  // Último recurso offline: mostrar solo el usuario de sesión activa
+  if (!personas.length) {
+    const u = localStorage.getItem('usuarioActual');
+    sel.innerHTML = '<option disabled selected>' + (u ? 'Solo tú disponible sin conexión' : 'Sin personas') + '</option>';
+    if (u) {
+      const o = document.createElement('option');
+      o.value = 'offline-user';
+      o.textContent = u + ' (sesión actual)';
+      sel.appendChild(o);
+    }
+    return;
+  }
+
   sel.innerHTML = '<option disabled selected>Selecciona el dueño</option>';
   personas.forEach(p => {
     const o = document.createElement('option');
@@ -352,8 +371,6 @@ async function cargarPersonasSelector() {
     o.textContent = `${p.nombres} ${p.apellidos}`;
     sel.appendChild(o);
   });
-  if (!personas.length)
-    sel.innerHTML = '<option disabled>Sin personas — usa "Registrar nuevo"</option>';
 }
 
 // ============================================================
@@ -488,16 +505,18 @@ async function guardarCenso() {
       await DB_PERSONAS.put({ _id: id, ...payload, remoteId: null, syncStatus: 'pending_create' });
       idDueno = id;
       if (enLinea) {
-        btn.textContent = '⏳ Registrando dueño...';
-        const res = await fetch(`${API_URL}/api/v1/personas`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('Dueño: ' + await res.text());
-        const creada = await res.json();
-        idDueno = creada.id;
-        const doc = await DB_PERSONAS.get(id);
-        await DB_PERSONAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
+        try {
+          btn.textContent = '⏳ Registrando dueño...';
+          const res = await fetch(`${API_URL}/api/v1/personas`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('Dueño: ' + await res.text());
+          const creada = await res.json();
+          idDueno = creada.id;
+          const doc = await DB_PERSONAS.get(id);
+          await DB_PERSONAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
+        } catch(fe) { console.warn('[Censo] Sin red para dueño:', fe.message); }
       }
     } else {
       idDueno = document.getElementById('persona').value;
@@ -528,16 +547,18 @@ async function guardarCenso() {
     let idMascota = mId;
 
     if (enLinea) {
-      btn.textContent = '⏳ Registrando mascota...';
-      const res = await fetch(`${API_URL}/api/v1/mascotas`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mascotaPayload)
-      });
-      if (!res.ok) throw new Error('Mascota: ' + await res.text());
-      const creada = await res.json();
-      idMascota = creada.id;
-      const doc = await DB_MASCOTAS.get(mId);
-      await DB_MASCOTAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
+      try {
+        btn.textContent = '⏳ Registrando mascota...';
+        const res = await fetch(`${API_URL}/api/v1/mascotas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(mascotaPayload)
+        });
+        if (!res.ok) throw new Error('Mascota: ' + await res.text());
+        const creada = await res.json();
+        idMascota = creada.id;
+        const doc = await DB_MASCOTAS.get(mId);
+        await DB_MASCOTAS.put({ ...doc, remoteId: creada.id, syncStatus: 'synced' });
+      } catch(fe) { console.warn('[Censo] Sin red para mascota:', fe.message); }
     }
 
     // ══ CENSO ══
@@ -554,17 +575,19 @@ async function guardarCenso() {
     await DB_CENSOS.put({ _id: cId, ...censoPayload, remoteId: null, syncStatus: 'pending_create' });
 
     if (enLinea) {
-      btn.textContent = '⏳ Guardando censo...';
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/v1/censos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(censoPayload)
-      });
-      if (!res.ok) throw new Error('Censo: ' + await res.text());
-      const creado = await res.json();
-      const doc = await DB_CENSOS.get(cId);
-      await DB_CENSOS.put({ ...doc, remoteId: creado.id, syncStatus: 'synced' });
+      try {
+        btn.textContent = '⏳ Guardando censo...';
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/v1/censos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(censoPayload)
+        });
+        if (!res.ok) throw new Error('Censo: ' + await res.text());
+        const creado = await res.json();
+        const doc = await DB_CENSOS.get(cId);
+        await DB_CENSOS.put({ ...doc, remoteId: creado.id, syncStatus: 'synced' });
+      } catch(fe) { console.warn('[Censo] Sin red para censo:', fe.message); }
     }
 
     mostrarAlerta('censoAlerta',
